@@ -1,0 +1,60 @@
+name: 'UV Sync Dependencies'
+description: 'Sync UV workspace dependencies with optional extras and local wheels'
+inputs:
+  workspace-member:
+    description: 'Specific workspace member to sync (optional, default: all)'
+    required: false
+    default: ''
+  extras:
+    description: 'Comma-separated extras to install, e.g., "testing,dev"'
+    required: false
+    default: ''
+  local-wheel-dir:
+    description: 'Path to directory containing local wheels to install'
+    required: false
+    default: ''
+  python-version:
+    description: 'Python version to use for sync'
+    required: false
+    default: ''
+runs:
+  using: "composite"
+  steps:
+    - name: Sync workspace
+      shell: bash
+      run: |
+        cd ${{ github.workspace }}
+        
+        SYNC_CMD="uv sync"
+        
+        # Add workspace member if specified
+        if [ -n "${{ inputs.workspace-member }}" ]; then
+          SYNC_CMD="$SYNC_CMD --package ${{ inputs.workspace-member }}"
+        fi
+        
+        # Add python version if specified
+        if [ -n "${{ inputs.python-version }}" ]; then
+          SYNC_CMD="$SYNC_CMD --python ${{ inputs.python-version }}"
+        fi
+        
+        # Add extras if specified
+        if [ -n "${{ inputs.extras }}" ]; then
+          IFS=',' read -ra EXTRAS <<< "${{ inputs.extras }}"
+          for extra in "${EXTRAS[@]}"; do
+            SYNC_CMD="$SYNC_CMD --extra $extra"
+          done
+        fi
+        
+        # Sync dependencies
+        echo "Running: $SYNC_CMD"
+        $SYNC_CMD
+    
+    - name: Install local wheels
+      if: inputs.local-wheel-dir != ''
+      shell: bash
+      run: |
+        if [ -d "${{ inputs.local-wheel-dir }}" ]; then
+          echo "Installing local wheels from ${{ inputs.local-wheel-dir }}"
+          uv pip install --find-links "${{ inputs.local-wheel-dir }}" "${{ inputs.local-wheel-dir }}"/*.whl
+        fi
+
