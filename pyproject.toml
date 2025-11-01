@@ -122,6 +122,9 @@ torchvision = { index = "pytorch-cpu" }
 [tool.py-build-cmake.module]
 directory = "src/python"
 
+[tool.py-build-cmake.editable]
+mode = "wrapper"
+
 [tool.py-build-cmake.sdist]
 include = ["CMakeLists.txt", "LICENSE", "third-party-programs.txt", "SECURITY.md", "cmake", "src", "thirdparty"]
 
