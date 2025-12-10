@@ -105,6 +105,12 @@ from .py_openvino_genai import (
     RawImageGenerationPerfMetrics,
 )
 
+# Video generation models
+from .py_openvino_genai import (
+    LTXVideoTransformer3DModel,
+    AutoencoderKLLTXVideo,
+)
+
 # Continuous batching
 from .py_openvino_genai import (
     ContinuousBatchingPipeline,
