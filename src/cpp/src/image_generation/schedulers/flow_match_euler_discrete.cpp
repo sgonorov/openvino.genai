@@ -49,8 +49,7 @@ FlowMatchEulerDiscreteScheduler::Config::Config(const std::filesystem::path& sch
     read_json_param(data, "base_image_seq_len", base_image_seq_len);
     read_json_param(data, "max_image_seq_len", max_image_seq_len);
     nlohmann::json::iterator iter = data.find("shift_terminal");
-    // TODO: verify other pipelines don't set it because they don't use it
-    if (iter != data.end()) {
+    if (iter != data.end() && !iter->is_null()) {
         shift_terminal = *iter;
     }
 }

@@ -16,7 +16,7 @@ namespace py = pybind11;
 namespace pyutils = ov::genai::pybind::utils;
 
 void init_video_generation_pipelines(py::module_& m) {
-    py::class_<ov::genai::VideoGenerationConfig, ov::genai::ImageGenerationConfig>(m, "VideoGenerationConfig")
+    py::class_<ov::genai::VideoGenerationConfig>(m, "VideoGenerationConfig")
         .def(py::init<>())
         .def_readwrite("guidance_rescale", &ov::genai::VideoGenerationConfig::guidance_rescale)
         .def_readwrite("num_frames", &ov::genai::VideoGenerationConfig::num_frames)
@@ -54,13 +54,6 @@ void init_video_generation_pipelines(py::module_& m) {
             }),
             py::arg("models_path"),
             py::arg("device"))
-        .def_static("ltx_video",
-                    &ov::genai::Text2VideoPipeline::ltx_video,
-                    py::arg("scheduler"),
-                    py::arg("t5_text_encoder"),
-                    py::arg("transformer"),
-                    py::arg("vae"))
-        .def("clone", &ov::genai::Text2VideoPipeline::clone)
         .def("get_generation_config",
              &ov::genai::Text2VideoPipeline::get_generation_config,
              py::return_value_policy::copy)
@@ -105,7 +98,5 @@ void init_video_generation_pipelines(py::module_& m) {
                 }
                 return result;
             },
-            py::arg("prompt"))
-        .def("decode", &ov::genai::Text2VideoPipeline::decode, py::arg("latent"))
-        .def("export_model", &ov::genai::Text2VideoPipeline::export_model, py::arg("export_path"));
+            py::arg("prompt"));
 }
