@@ -156,6 +156,10 @@ MODELS: Dict[str, Dict[str, Any]] = {
     "tiny-random-llava-next-video": {
         "name": "katuni4ka/tiny-random-llava-next-video",
         "convert_args": ["--trust-remote-code", "--task", "image-text-to-text"]
+    },
+    "tiny-random-ltx-video": {
+        "name": "optimum-intel-internal-testing/tiny-random-ltx-video",
+        "convert_args": ["--trust-remote-code"]
     }
 }
 
