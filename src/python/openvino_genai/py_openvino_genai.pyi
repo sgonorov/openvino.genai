@@ -5,7 +5,7 @@ from __future__ import annotations
 import collections.abc
 import openvino._pyopenvino
 import typing
-__all__: list[str] = ['Adapter', 'AdapterConfig', 'AggregationMode', 'AutoencoderKL', 'CLIPTextModel', 'CLIPTextModelWithProjection', 'CacheEvictionConfig', 'ChatHistory', 'ChunkStreamerBase', 'ContinuousBatchingPipeline', 'CppStdGenerator', 'DecodedResults', 'DeepSeekR1ReasoningIncrementalParser', 'DeepSeekR1ReasoningParser', 'EncodedGenerationResult', 'EncodedResults', 'ExtendedPerfMetrics', 'FluxTransformer2DModel', 'GenerationConfig', 'GenerationFinishReason', 'GenerationHandle', 'GenerationOutput', 'GenerationResult', 'GenerationStatus', 'Generator', 'Image2ImagePipeline', 'ImageGenerationConfig', 'ImageGenerationPerfMetrics', 'IncrementalParser', 'InpaintingPipeline', 'KVCrushAnchorPointMode', 'KVCrushConfig', 'LLMPipeline', 'Llama3JsonToolParser', 'Llama3PythonicToolParser', 'MeanStdPair', 'Parser', 'PerfMetrics', 'Phi4ReasoningIncrementalParser', 'Phi4ReasoningParser', 'PipelineMetrics', 'RawImageGenerationPerfMetrics', 'RawPerfMetrics', 'ReasoningIncrementalParser', 'ReasoningParser', 'SD3Transformer2DModel', 'SDPerModelsPerfMetrics', 'SDPerfMetrics', 'Scheduler', 'SchedulerConfig', 'SparseAttentionConfig', 'SparseAttentionMode', 'SpeechGenerationConfig', 'SpeechGenerationPerfMetrics', 'StopCriteria', 'StreamerBase', 'StreamingStatus', 'StructuralTagItem', 'StructuralTagsConfig', 'StructuredOutputConfig', 'SummaryStats', 'T5EncoderModel', 'Text2ImagePipeline', 'Text2SpeechDecodedResults', 'Text2SpeechPipeline', 'TextEmbeddingPipeline', 'TextParserStreamer', 'TextRerankPipeline', 'TextStreamer', 'TokenizedInputs', 'Tokenizer', 'TorchGenerator', 'UNet2DConditionModel', 'VLMDecodedResults', 'VLMPerfMetrics', 'VLMPipeline', 'VLMRawPerfMetrics', 'WhisperDecodedResultChunk', 'WhisperDecodedResults', 'WhisperGenerationConfig', 'WhisperPerfMetrics', 'WhisperPipeline', 'WhisperRawPerfMetrics', 'draft_model', 'get_version']
+__all__: list[str] = ['Adapter', 'AdapterConfig', 'AggregationMode', 'AutoencoderKL', 'AutoencoderKLLTXVideo', 'CLIPTextModel', 'CLIPTextModelWithProjection', 'CacheEvictionConfig', 'ChatHistory', 'ChunkStreamerBase', 'ContinuousBatchingPipeline', 'CppStdGenerator', 'DecodedResults', 'DeepSeekR1ReasoningIncrementalParser', 'DeepSeekR1ReasoningParser', 'EncodedGenerationResult', 'EncodedResults', 'ExtendedPerfMetrics', 'FluxTransformer2DModel', 'GenerationConfig', 'GenerationFinishReason', 'GenerationHandle', 'GenerationOutput', 'GenerationResult', 'GenerationStatus', 'Generator', 'Image2ImagePipeline', 'ImageGenerationConfig', 'ImageGenerationPerfMetrics', 'IncrementalParser', 'InpaintingPipeline', 'KVCrushAnchorPointMode', 'KVCrushConfig', 'LLMPipeline', 'LTXVideoTransformer3DModel', 'Llama3JsonToolParser', 'Llama3PythonicToolParser', 'MeanStdPair', 'Parser', 'PerfMetrics', 'Phi4ReasoningIncrementalParser', 'Phi4ReasoningParser', 'PipelineMetrics', 'RawImageGenerationPerfMetrics', 'RawPerfMetrics', 'ReasoningIncrementalParser', 'ReasoningParser', 'SD3Transformer2DModel', 'SDPerModelsPerfMetrics', 'SDPerfMetrics', 'Scheduler', 'SchedulerConfig', 'SparseAttentionConfig', 'SparseAttentionMode', 'SpeechGenerationConfig', 'SpeechGenerationPerfMetrics', 'StopCriteria', 'StreamerBase', 'StreamingStatus', 'StructuralTagItem', 'StructuralTagsConfig', 'StructuredOutputConfig', 'SummaryStats', 'T5EncoderModel', 'Text2ImagePipeline', 'Text2SpeechDecodedResults', 'Text2SpeechPipeline', 'TextEmbeddingPipeline', 'TextParserStreamer', 'TextRerankPipeline', 'TextStreamer', 'TokenizedInputs', 'Tokenizer', 'TorchGenerator', 'UNet2DConditionModel', 'VLMDecodedResults', 'VLMPerfMetrics', 'VLMPipeline', 'VLMRawPerfMetrics', 'WhisperDecodedResultChunk', 'WhisperDecodedResults', 'WhisperGenerationConfig', 'WhisperPerfMetrics', 'WhisperPipeline', 'WhisperRawPerfMetrics', 'draft_model', 'get_version']
 class Adapter:
     """
     Immutable LoRA Adapter that carries the adaptation matrices and serves as unique adapter identifier.
@@ -253,6 +253,86 @@ class AutoencoderKL:
     def get_vae_scale_factor(self) -> int:
         ...
     def reshape(self, batch_size: typing.SupportsInt, height: typing.SupportsInt, width: typing.SupportsInt) -> AutoencoderKL:
+        ...
+class AutoencoderKLLTXVideo:
+    """
+    AutoencoderKLLTXVideo class for LTX-Video VAE decoding.
+    """
+    class Config:
+        """
+        Configuration for AutoencoderKLLTXVideo.
+        """
+        def __init__(self, config_path: os.PathLike | str | bytes) -> None:
+            ...
+        @property
+        def block_out_channels(self) -> list[int]:
+            ...
+        @property
+        def in_channels(self) -> int:
+            ...
+        @property
+        def latent_channels(self) -> int:
+            ...
+        @property
+        def out_channels(self) -> int:
+            ...
+        @property
+        def patch_size(self) -> int:
+            ...
+        @property
+        def patch_size_t(self) -> int:
+            ...
+        @property
+        def scaling_factor(self) -> float:
+            ...
+        @property
+        def shift_factor(self) -> float:
+            ...
+    @typing.overload
+    def __init__(self, vae_decoder_path: os.PathLike | str | bytes) -> None:
+        """
+                    AutoencoderKLLTXVideo class constructor with decoder only.
+                    vae_decoder_path (os.PathLike): VAE decoder directory.
+        """
+    @typing.overload
+    def __init__(self, vae_encoder_path: os.PathLike | str | bytes, vae_decoder_path: os.PathLike | str | bytes) -> None:
+        """
+                    AutoencoderKLLTXVideo class constructor with encoder and decoder.
+                    vae_encoder_path (os.PathLike): VAE encoder directory.
+                    vae_decoder_path (os.PathLike): VAE decoder directory.
+        """
+    @typing.overload
+    def __init__(self, vae_decoder_path: os.PathLike | str | bytes, device: str, **kwargs) -> None:
+        """
+                    AutoencoderKLLTXVideo class constructor with decoder only.
+                    vae_decoder_path (os.PathLike): VAE decoder directory.
+                    device (str): Device on which inference will be done.
+                    kwargs: Device properties.
+        """
+    @typing.overload
+    def __init__(self, vae_encoder_path: os.PathLike | str | bytes, vae_decoder_path: os.PathLike | str | bytes, device: str, **kwargs) -> None:
+        """
+                    AutoencoderKLLTXVideo class constructor with encoder and decoder.
+                    vae_encoder_path (os.PathLike): VAE encoder directory.
+                    vae_decoder_path (os.PathLike): VAE decoder directory.
+                    device (str): Device on which inference will be done.
+                    kwargs: Device properties.
+        """
+    def compile(self, device: str, **kwargs) -> AutoencoderKLLTXVideo:
+        """
+                        Compiles the model.
+                        device (str): Device to run the model on (e.g., CPU, GPU).
+                        kwargs: Device properties.
+        """
+    def decode(self, latent: openvino._pyopenvino.Tensor) -> openvino._pyopenvino.Tensor:
+        """
+                        Decodes latent video to pixel space.
+                        latent (ov.Tensor): Latent video tensor.
+                        Returns: Decoded video tensor.
+        """
+    def get_config(self) -> AutoencoderKLLTXVideo.Config:
+        ...
+    def get_vae_scale_factor(self) -> int:
         ...
 class CLIPTextModel:
     """
@@ -1839,6 +1919,66 @@ class LLMPipeline:
         ...
     def start_chat(self, system_message: str = '') -> None:
         ...
+class LTXVideoTransformer3DModel:
+    """
+    LTXVideoTransformer3DModel class for LTX-Video denoising.
+    """
+    class Config:
+        """
+        Configuration for LTXVideoTransformer3DModel.
+        """
+        def __init__(self, config_path: os.PathLike | str | bytes) -> None:
+            ...
+        @property
+        def in_channels(self) -> int:
+            ...
+        @property
+        def patch_size(self) -> int:
+            ...
+        @property
+        def patch_size_t(self) -> int:
+            ...
+    @typing.overload
+    def __init__(self, root_dir: os.PathLike | str | bytes) -> None:
+        """
+                    LTXVideoTransformer3DModel class constructor.
+                    root_dir (os.PathLike): Model root directory.
+        """
+    @typing.overload
+    def __init__(self, root_dir: os.PathLike | str | bytes, device: str, **kwargs) -> None:
+        """
+                    LTXVideoTransformer3DModel class constructor.
+                    root_dir (os.PathLike): Model root directory.
+                    device (str): Device on which inference will be done.
+                    kwargs: Device properties.
+        """
+    @typing.overload
+    def __init__(self, model: LTXVideoTransformer3DModel) -> None:
+        """
+                    LTXVideoTransformer3DModel copy constructor.
+                    model (LTXVideoTransformer3DModel): Model to copy.
+        """
+    def compile(self, device: str, **kwargs) -> LTXVideoTransformer3DModel:
+        """
+                        Compiles the model.
+                        device (str): Device to run the model on (e.g., CPU, GPU).
+                        kwargs: Device properties.
+        """
+    def get_config(self) -> LTXVideoTransformer3DModel.Config:
+        ...
+    def infer(self, latent: openvino._pyopenvino.Tensor, timestep: openvino._pyopenvino.Tensor) -> openvino._pyopenvino.Tensor:
+        """
+                        Performs inference.
+                        latent (ov.Tensor): Latent video tensor.
+                        timestep (ov.Tensor): Current timestep tensor.
+                        Returns: Denoised latent tensor.
+        """
+    def set_hidden_states(self, tensor_name: str, encoder_hidden_states: openvino._pyopenvino.Tensor) -> None:
+        """
+                        Sets encoder hidden states tensor.
+                        tensor_name (str): Name of the tensor input.
+                        encoder_hidden_states (ov.Tensor): Hidden states from text encoder.
+        """
 class Llama3JsonToolParser(Parser):
     def __init__(self) -> None:
         ...
