@@ -45,6 +45,11 @@ class Sequence {
     uint64_t m_grouped_id;
     uint64_t m_id = _get_next_global_sequence_id();
     ov::Tensor m_hidden_state = ov::Tensor();
+    ov::Tensor m_intermediate_hidden_state = ov::Tensor();
+    // When enabled, hidden states are accumulated across all generation steps
+    bool m_accumulate_hidden_states = false;
+    std::vector<ov::Tensor> m_all_hidden_states;
+    std::vector<ov::Tensor> m_all_intermediate_hidden_states;
     SequenceStatus m_status = SequenceStatus::RUNNING;
     GenerationFinishReason m_finish_reason = GenerationFinishReason::NONE;
     float m_cumulative_log_prob = 0.0f;
@@ -72,6 +77,10 @@ class Sequence {
         m_generated_log_probs(seq.m_generated_log_probs),
         m_grouped_id(id),
         m_hidden_state(seq.m_hidden_state),
+        m_intermediate_hidden_state(seq.m_intermediate_hidden_state),
+        m_accumulate_hidden_states(seq.m_accumulate_hidden_states),
+        m_all_hidden_states(seq.m_all_hidden_states),
+        m_all_intermediate_hidden_states(seq.m_all_intermediate_hidden_states),
         m_status(seq.m_status),
         m_cumulative_log_prob(seq.m_cumulative_log_prob),
         m_sequence_group(seq.m_sequence_group),
@@ -146,10 +155,45 @@ public:
 
     void update_hidden_state(const ov::Tensor& tensor) {
         m_hidden_state = tensor;
+        if (m_accumulate_hidden_states && tensor.get_size() > 0) {
+            // Deep copy for accumulation
+            ov::Tensor copy(tensor.get_element_type(), tensor.get_shape());
+            tensor.copy_to(copy);
+            m_all_hidden_states.push_back(std::move(copy));
+        }
     }
 
     ov::Tensor get_hidden_state() const {
         return m_hidden_state;
+    }
+
+    void update_intermediate_hidden_state(const ov::Tensor& tensor) {
+        m_intermediate_hidden_state = tensor;
+        if (m_accumulate_hidden_states && tensor.get_size() > 0) {
+            ov::Tensor copy(tensor.get_element_type(), tensor.get_shape());
+            tensor.copy_to(copy);
+            m_all_intermediate_hidden_states.push_back(std::move(copy));
+        }
+    }
+
+    ov::Tensor get_intermediate_hidden_state() const {
+        return m_intermediate_hidden_state;
+    }
+
+    void set_accumulate_hidden_states(bool enable) {
+        m_accumulate_hidden_states = enable;
+        if (enable) {
+            m_all_hidden_states.reserve(256);
+            m_all_intermediate_hidden_states.reserve(256);
+        }
+    }
+
+    const std::vector<ov::Tensor>& get_all_hidden_states() const {
+        return m_all_hidden_states;
+    }
+
+    const std::vector<ov::Tensor>& get_all_intermediate_hidden_states() const {
+        return m_all_intermediate_hidden_states;
     }
 
     // removes n last tokens and updates cumulative log prob
@@ -292,7 +336,7 @@ public:
         ov::Coordinate end;
         if (position_ids_elem_shape.size() == 3) {
             begin = ov::Coordinate{0, 0, idx};
-            end = ov::Coordinate{3, 1, idx + 1};
+            end = ov::Coordinate{position_ids_elem_shape[0], 1, idx + 1};
         }
         else if (position_ids_elem_shape.size() == 2) {
             if (need_batch_dimention) {
