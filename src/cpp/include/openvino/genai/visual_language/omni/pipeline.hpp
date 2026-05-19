@@ -15,7 +15,7 @@
 
 namespace ov::genai {
 
-class OPENVINO_GENAI_EXPORTS OmniDecodedResults: public VLMDecodedResults {
+class OPENVINO_GENAI_EXPORTS OmniDecodedResults : public VLMDecodedResults {
 public:
     /// @brief Speech output waveforms (one per generated result).
     std::vector<ov::Tensor> speech_outputs;
@@ -85,7 +85,7 @@ public:
         : OmniPipeline(models_map, tokenizer, config_dir_path, device, ov::AnyMap{std::forward<Properties>(properties)...}) { }
 
     OmniPipeline(
-        const VLMPipeline& vlm,
+        const std::shared_ptr<VLMPipelineBase>& vlm,
         const std::filesystem::path& audio_model_xml,
         const std::filesystem::path& audio_config_json,
         const std::string& device,
@@ -174,15 +174,5 @@ private:
     std::unique_ptr<OmniPipelineImpl> m_pimpl;
 };
 
-/*
- * utils that allow to use generate() in the following way:
- * pipe.generate(prompt, ov::genai::image(image_tensor)).
- * pipe.generate(prompt, ov::genai::images(image_tensors)).
- * pipe.generate(prompt, ov::genai::videos(videos_tensors)).
-*/
-static constexpr ov::Property<ov::Tensor> image{"image"};
-static constexpr ov::Property<std::vector<ov::Tensor>> images{"images"};
-static constexpr ov::Property<std::vector<ov::Tensor>> videos{"videos"};
-static constexpr ov::Property<std::vector<VideoMetadata>> videos_metadata{"videos_metadata"};
-static constexpr ov::Property<std::vector<ov::Tensor>> audios{"audios"};
+static constexpr ov::Property<ov::Tensor> return_audio{"return_audio"};
 }

@@ -32,9 +32,83 @@ public:
     std::shared_ptr<HiddenStatesData> m_hidden_states_data;  // Why shared_ptr?
 };
 
+
+class OPENVINO_GENAI_EXPORTS VLMPipelineBase {
+public:
+    virtual ~VLMPipelineBase() = default;
+    VLMDecodedResults generate(
+        const std::string& prompt,
+        const std::vector<ov::Tensor>& images,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    VLMDecodedResults generate(
+        const std::string& prompt,
+        const std::vector<ov::Tensor>& images,
+        const std::vector<ov::Tensor>& videos,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    VLMDecodedResults generate(
+        const std::string& prompt,
+        const ov::Tensor& image,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    VLMDecodedResults generate(
+        const std::string& prompt,
+        const ov::AnyMap& config_map
+    ) = 0;
+    template <typename... Properties>
+    util::EnableIfAllStringAny<VLMDecodedResults, Properties...> generate(
+        const std::string& prompt,
+        Properties&&... properties
+    ) = 0;
+    VLMDecodedResults generate(
+        const ChatHistory& history,
+        const std::vector<ov::Tensor>& images,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    VLMDecodedResults generate(
+        const ChatHistory& history,
+        const std::vector<ov::Tensor>& images,
+        const std::vector<ov::Tensor>& videos,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    VLMDecodedResults generate(
+        const ChatHistory& history,
+        const std::vector<ov::Tensor>& images,
+        const std::vector<ov::Tensor>& videos,
+        const std::vector<ov::Tensor>& audios,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    VLMDecodedResults generate(
+        const ChatHistory& history,
+        const ov::Tensor& image,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    VLMDecodedResults generate(
+        const ChatHistory& history,
+        const ov::AnyMap& config_map
+    ) = 0;
+    template <typename... Properties>
+    util::EnableIfAllStringAny<VLMDecodedResults, Properties...> generate(
+        const ChatHistory& history,
+        Properties&&... properties
+    ) = 0;
+    ov::genai::Tokenizer get_tokenizer() = 0;
+    GenerationConfig get_generation_config() const = 0;
+    void set_generation_config(const GenerationConfig& new_config) = 0;
+
+};
+
 /// @brief A Visual language modeling pipeline class used to generate a
 /// response or run a chat given a prompt and an image.
-class OPENVINO_GENAI_EXPORTS VLMPipeline {
+class OPENVINO_GENAI_EXPORTS VLMPipeline : public VLMPipelineBase {
 public:
     /// @brief Construct a pipeline from a folder containing tokenizer
     /// and model IRs.
@@ -115,7 +189,7 @@ public:
         const std::vector<ov::Tensor>& images,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
 
     /// @brief Generate a response given a prompt and uint8 RGB image with [NHWC] or [HWC] layout.
     /// @param prompt A prompt to respond to.
@@ -134,7 +208,7 @@ public:
         const std::vector<ov::Tensor>& videos,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
 
     /// @brief Generate a response given a prompt and uint8 RGB image with [NHWC] or [HWC] layout.
     /// @param prompt A prompt to respond to.
@@ -151,7 +225,7 @@ public:
         const ov::Tensor& image,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
 
     /// @brief Generate a response given a prompt and config.
     /// @param prompt A prompt to respond to.
@@ -166,7 +240,7 @@ public:
     VLMDecodedResults generate(
         const std::string& prompt,
         const ov::AnyMap& config_map
-    );
+    ) override;
 
     /// @brief Generate a response given a prompt and arbitrary number
     /// of ov::Property instances.
@@ -204,7 +278,7 @@ public:
         const std::vector<ov::Tensor>& images,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
 
     /// @brief Generate a response given a chat history and any number of
     /// uint8 RGB images/videos with [NHWC] layout.
@@ -222,7 +296,7 @@ public:
         const std::vector<ov::Tensor>& videos,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
 
     VLMDecodedResults generate(
         const ChatHistory& history,
@@ -231,7 +305,7 @@ public:
         const std::vector<ov::Tensor>& audios,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
 
     /// @brief Generate a response given a chat history and uint8 RGB image with [NHWC] or [HWC] layout.
     /// @param history Chat history with messages.
@@ -246,7 +320,7 @@ public:
         const ov::Tensor& image,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
 
     /// @brief Generate a response given a chat history and arbitrary number
     /// of ov::Property instances.
@@ -260,7 +334,7 @@ public:
     VLMDecodedResults generate(
         const ChatHistory& history,
         const ov::AnyMap& config_map
-    );
+    ) override;
 
     /// @brief Generate a response given a chat history and config.
     /// @param history Chat history with messages.
@@ -299,15 +373,17 @@ public:
 
     /// @brief Get a Tokenizer used to tokenize input and detokenize
     /// output.
-    ov::genai::Tokenizer get_tokenizer() const;
+    ov::genai::Tokenizer get_tokenizer() const override;
+
+     /// @brief Generate a response given a prompt and any number of
 
     /// @brief Extract GenerationConfig used to get default values.
     /// @return Default values used.
-    GenerationConfig get_generation_config() const;
+    GenerationConfig get_generation_config() const private;
 
     /// @brief Override default values for GenerationConfig
     /// @param new_config A config to override default values with.
-    void set_generation_config(const GenerationConfig& new_config);
+    void set_generation_config(const GenerationConfig& new_config) override;
 
 private:
     class VLMPipelineBase;
