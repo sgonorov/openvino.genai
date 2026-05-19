@@ -18,9 +18,6 @@ namespace ov::genai {
 class OPENVINO_GENAI_EXPORTS VLMDecodedResults : public DecodedResults{
 public:
     VLMPerfMetrics perf_metrics;
-    /// @brief Optional speech output waveforms (one per generated result).
-    /// Empty if speech generation was not requested or model does not support it.
-    std::vector<ov::Tensor> speech_outputs;
 
     // Internal fields for speech pipeline (not exposed to Python bindings).
     // Populated by CB generate when return_audio is requested, consumed by VLM adapter.
@@ -59,11 +56,6 @@ public:
         const std::string& prompt,
         const ov::AnyMap& config_map
     ) = 0;
-    template <typename... Properties>
-    util::EnableIfAllStringAny<VLMDecodedResults, Properties...> generate(
-        const std::string& prompt,
-        Properties&&... properties
-    ) = 0;
     VLMDecodedResults generate(
         const ChatHistory& history,
         const std::vector<ov::Tensor>& images,
@@ -95,12 +87,7 @@ public:
         const ChatHistory& history,
         const ov::AnyMap& config_map
     ) = 0;
-    template <typename... Properties>
-    util::EnableIfAllStringAny<VLMDecodedResults, Properties...> generate(
-        const ChatHistory& history,
-        Properties&&... properties
-    ) = 0;
-    ov::genai::Tokenizer get_tokenizer() = 0;
+    ov::genai::Tokenizer get_tokenizer() const = 0;
     GenerationConfig get_generation_config() const = 0;
     void set_generation_config(const GenerationConfig& new_config) = 0;
 
@@ -379,7 +366,7 @@ public:
 
     /// @brief Extract GenerationConfig used to get default values.
     /// @return Default values used.
-    GenerationConfig get_generation_config() const private;
+    GenerationConfig get_generation_config() const override;
 
     /// @brief Override default values for GenerationConfig
     /// @param new_config A config to override default values with.
