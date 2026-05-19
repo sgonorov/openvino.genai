@@ -12,6 +12,9 @@
 namespace ov::genai {
 class OPENVINO_GENAI_EXPORTS OmniSpeechGenerationConfig {
 public:
+    OmniSpeechGenerationConfig() = default;
+    explicit OmniSpeechGenerationConfig(const std::filesystem::path& json_path);
+
     size_t max_new_tokens = SIZE_MAX;
     size_t max_length = SIZE_MAX;
     bool ignore_eos = false;

@@ -32,7 +32,7 @@ public:
     /// for CPU.
     /// @param properties A config to pass to ov::Core::compile_model().
     OmniPipeline(
-        const std::filesystem::path& models_path,
+        const std::filesystem::path& models_dir,
         const std::string& device,
         const ov::AnyMap& properties = {}
     );
@@ -49,10 +49,11 @@ public:
     OmniPipeline(
         const ModelsMap& models_map,
         const Tokenizer& tokenizer,
-        const std::filesystem::path& config_dir_path,
+        const std::filesystem::path& config_dir,
         const std::string& device,
         const ov::AnyMap& properties = {},
-        const ov::genai::GenerationConfig& generation_config = {}
+        const ov::genai::GenerationConfig& generation_config = {},
+        const ov::genai::OmniSpeechGenerationConfig& speech_generation_config = {}
     );
 
     /// @brief Construct a pipeline from a folder containing tokenizer
@@ -80,17 +81,16 @@ public:
     OmniPipeline(
         const ModelsMap& models_map,
         const Tokenizer& tokenizer,
-        const std::filesystem::path& config_dir_path,
+        const std::filesystem::path& config_dir,
         const std::string& device,
         Properties&&... properties
     ): OmniPipeline(models_map, tokenizer, config_dir_path, device, ov::AnyMap{std::forward<Properties>(properties)...}) {}
 
     OmniPipeline(
         const std::shared_ptr<VLMPipelineBase>& vlm,
-        const std::filesystem::path& audio_model_xml,
-        const std::filesystem::path& audio_config_json,
-        const std::string& device,
-        const ov::genai::GenerationConfig& audio_generation_config,
+        const std::filesystem::path& audio_xml,
+        const std::string& audio_device,
+        const ov::genai::OmniSpeechGenerationConfig& speech_generation_config,
         const ov::AnyMap& properties = {}
     );
 
@@ -106,28 +106,6 @@ public:
         const OmniSpeechGenerationConfig& speech_generation_config,
         const AudioStreamerVariant& streamer
     );
-
-    /// @brief Generate a response given a prompt and arbitrary number
-    /// of ov::Property instances.
-    /// Example:
-    /// generate("text", image(rgb), do_sample(true));
-    /// @param prompt A prompt to respond to.
-    /// For using image and video tags in prompt, see:
-    /// https://openvinotoolkit.github.io/openvino.genai/docs/use-cases/image-processing/#use-image-or-video-tags-in-prompt
-    /// @param ...properties ov::Property instances to be combined into
-    /// ov::AnyMap.
-    /// @return OmniDecodedResults structure containing generated texts, scores and perf metrics.
-    /// chat_template will be applied to the prompt, run pipe.set_chat_template(custom_chat_template) to update it.
-    /// To disable it for non-chat mode, please, use custom_chat_template eq "" or set generation_config.apply_chat_template to false.
-    template <typename... Properties>
-    util::EnableIfAllStringAny<OmniDecodedResults, Properties...> generate(
-        const std::string& prompt,
-        Properties&&... properties
-    ) {
-        return generate(
-            prompt, AnyMap{std::forward<Properties>(properties)...}
-        );
-    }
 
     /// @brief Generate a response given a chat history and arbitrary number
     /// of ov::Property instances.
@@ -158,7 +136,34 @@ public:
         return generate(history, AnyMap{std::forward<Properties>(properties)...});
     }
 
-    ov::genai::VLMPipeline get_vlm_pipeline() const;
+    OmniDecodedResults generate(
+        const std::string& prompt,
+        const ov::AnyMap& config_map
+    );
+
+    /// @brief Generate a response given a prompt and arbitrary number
+    /// of ov::Property instances.
+    /// Example:
+    /// generate("text", image(rgb), do_sample(true));
+    /// @param prompt A prompt to respond to.
+    /// For using image and video tags in prompt, see:
+    /// https://openvinotoolkit.github.io/openvino.genai/docs/use-cases/image-processing/#use-image-or-video-tags-in-prompt
+    /// @param ...properties ov::Property instances to be combined into
+    /// ov::AnyMap.
+    /// @return OmniDecodedResults structure containing generated texts, scores and perf metrics.
+    /// chat_template will be applied to the prompt, run pipe.set_chat_template(custom_chat_template) to update it.
+    /// To disable it for non-chat mode, please, use custom_chat_template eq "" or set generation_config.apply_chat_template to false.
+    template <typename... Properties>
+    util::EnableIfAllStringAny<OmniDecodedResults, Properties...> generate(
+        const std::string& prompt,
+        Properties&&... properties
+    ) {
+        return generate(
+            prompt, AnyMap{std::forward<Properties>(properties)...}
+        );
+    }
+
+    std::shared_ptr<ov::genai::VLMPipeline> get_vlm_pipeline() const;
 
     /// @brief Extract OmniSpeechGenerationConfig used to get default values.
     /// @return Default values used.
