@@ -12,6 +12,7 @@
 #include "openvino/genai/tokenizer.hpp"
 #include "openvino/genai/visual_language/perf_metrics.hpp"
 #include "openvino/genai/visual_language/video_metadata.hpp"
+#include "openvino/genai/omni/speech_generation_config.hpp"
 
 namespace ov::genai {
 
@@ -64,8 +65,8 @@ public:
     OmniPipeline(
         const std::filesystem::path& models_path,
         const std::string& device,
-        Properties&&... properties)
-        : OmniPipeline(models_path, device, ov::AnyMap{std::forward<Properties>(properties)...}) { }
+        Properties&&... properties
+    ): OmniPipeline(models_path, device, ov::AnyMap{std::forward<Properties>(properties)...}) {}
 
     /// @brief Construct a pipeline from a map of models and their weights.
     /// @param models_map A map where key is model name (e.g. "vision_embeddings", "text_embeddings", "language", "resampler")
@@ -81,8 +82,8 @@ public:
         const Tokenizer& tokenizer,
         const std::filesystem::path& config_dir_path,
         const std::string& device,
-        Properties&&... properties)
-        : OmniPipeline(models_map, tokenizer, config_dir_path, device, ov::AnyMap{std::forward<Properties>(properties)...}) { }
+        Properties&&... properties
+    ): OmniPipeline(models_map, tokenizer, config_dir_path, device, ov::AnyMap{std::forward<Properties>(properties)...}) {}
 
     OmniPipeline(
         const std::shared_ptr<VLMPipelineBase>& vlm,
@@ -102,7 +103,7 @@ public:
         const std::vector<ov::Tensor>& videos,
         const std::vector<ov::Tensor>& audios,
         const GenerationConfig& text_generation_config,
-        const GenerationConfig& audio_generation_config,
+        const OmniSpeechGenerationConfig& speech_generation_config,
         const AudioStreamerVariant& streamer
     );
 
@@ -154,20 +155,18 @@ public:
         const ChatHistory& history,
         Properties&&... properties
     ) {
-        return generate(
-            history, AnyMap{std::forward<Properties>(properties)...}
-        );
+        return generate(history, AnyMap{std::forward<Properties>(properties)...});
     }
 
     ov::genai::VLMPipeline get_vlm_pipeline() const;
 
-    /// @brief Extract GenerationConfig used to get default values.
+    /// @brief Extract OmniSpeechGenerationConfig used to get default values.
     /// @return Default values used.
-    GenerationConfig get_audio_generation_config() const;
+    OmniSpeechGenerationConfig get_speech_generation_config() const;
 
-    /// @brief Override default values for GenerationConfig
+    /// @brief Override default values for OmniSpeechGenerationConfig
     /// @param new_config A config to override default values with.
-    void set_generation_config(const GenerationConfig& new_config);
+    void set_speech_generation_config(const OmniSpeechGenerationConfig& new_config);
 
 private:
     class OmniPipelineImpl;
