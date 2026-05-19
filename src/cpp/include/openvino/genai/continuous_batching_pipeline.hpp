@@ -265,6 +265,7 @@ public:
     GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const ov::genai::GenerationConfig& sampling_params);
     GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const std::vector<ov::Tensor>& images, const ov::genai::GenerationConfig& sampling_params);
     GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const std::vector<ov::Tensor>& images, const std::vector<ov::Tensor>& videos, const ov::genai::GenerationConfig& sampling_params);
+    GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const std::vector<ov::Tensor>& images, const std::vector<ov::Tensor>& videos, std::vector<ov::Tensor>& audios, const ov::genai::GenerationConfig& sampling_params);
 
     GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const ov::AnyMap& properties_map);
 
@@ -306,6 +307,15 @@ public:
 
     std::vector<VLMDecodedResults> generate(
         const std::vector<std::string>& prompts,
+        const std::vector<std::vector<ov::Tensor>>& images,
+        const std::vector<std::vector<ov::Tensor>>& videos,
+        const std::vector<GenerationConfig>& sampling_params,
+        const std::vector<std::vector<ov::Tensor>>& audios,
+        const std::vector<GenerationConfig>& audio_sampling_params,
+        const StreamerVariant& streamer=std::monostate{});
+
+    std::vector<VLMDecodedResults> generate(
+        const std::vector<std::string>& prompts,
         const ov::AnyMap& properties_map
     );
 
@@ -328,7 +338,9 @@ public:
         const std::vector<std::vector<ov::Tensor>>& images,
         const std::vector<std::vector<ov::Tensor>>& videos,
         const std::vector<GenerationConfig>& sampling_params,
-        const StreamerVariant& streamer=std::monostate{});
+        const std::vector<std::vector<ov::Tensor>>& audios,
+        const std::vector<GenerationConfig>& audio_sampling_params,
+        const AudioStreamerVariant& streamer=std::monostate{});
 
     std::vector<VLMDecodedResults> generate(
         const std::vector<ChatHistory>& histories,
@@ -344,16 +356,10 @@ public:
     }
 
     /**
-    * @brief Forward audio tensors to the inputs embedder for encoding (Qwen3-Omni).
-    * @param audios vector of audio tensors to encode.
-    */
-    void encode_audios(const std::vector<ov::Tensor>& audios);
-
-    /**
     * @brief start chat with keeping history in kv cache.
     * @param system_message optional system message.
     */
-    void start_chat(const std::string& system_message = {});
+    void start_chat(const std::string& system_message = {});  // Deprecate?
 
     /**
     * @brief finish chat and clear kv cache.

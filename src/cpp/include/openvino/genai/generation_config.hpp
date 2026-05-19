@@ -685,9 +685,6 @@ public:
     // set to true if chat template should be applied for non-chat scenarios, set to false otherwise
     bool apply_chat_template = true;
 
-    // Qwen3-Omni speech output parameters
-    /// @brief Enable speech output generation (requires model with talker support).
-    bool return_audio = false;
     /// @brief Speaker name for speech output. Empty string selects the model's default speaker.
     /// Available names are model-specific and listed under `talker_config.speaker_id` in the
     /// model's config.json.
@@ -772,7 +769,6 @@ static constexpr ov::Property<std::string> backend{"backend"};
 
 static constexpr ov::Property<bool> apply_chat_template{"apply_chat_template"};
 
-static constexpr ov::Property<bool> return_audio{"return_audio"};
 static constexpr ov::Property<std::string> speaker{"speaker"};
 static constexpr ov::Property<size_t> audio_chunk_frames{"audio_chunk_frames"};
 

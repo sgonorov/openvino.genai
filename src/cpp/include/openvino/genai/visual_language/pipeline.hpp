@@ -29,7 +29,7 @@ public:
         std::vector<std::vector<ov::Tensor>> intermediate_hidden_states;
         std::vector<int64_t> prompt_ids;
     };
-    std::shared_ptr<HiddenStatesData> m_hidden_states_data;
+    std::shared_ptr<HiddenStatesData> m_hidden_states_data;  // Why shared_ptr?
 };
 
 /// @brief A Visual language modeling pipeline class used to generate a
@@ -220,6 +220,15 @@ public:
         const ChatHistory& history,
         const std::vector<ov::Tensor>& images,
         const std::vector<ov::Tensor>& videos,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    );
+
+    VLMDecodedResults generate(
+        const ChatHistory& history,
+        const std::vector<ov::Tensor>& images,
+        const std::vector<ov::Tensor>& videos,
+        const std::vector<ov::Tensor>& audios,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
     );
