@@ -359,7 +359,7 @@ public:
     * @brief start chat with keeping history in kv cache.
     * @param system_message optional system message.
     */
-    void start_chat(const std::string& system_message = {});  // Deprecate?
+    void start_chat(const std::string& system_message = {});
 
     /**
     * @brief finish chat and clear kv cache.
