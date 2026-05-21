@@ -10,6 +10,8 @@
 
 #include <openvino/runtime/tensor.hpp>
 
+#include "openvino/genai/omni/speech_streamer_base.hpp"
+#include "openvino/genai/omni/speech_generation_config.hpp"
 #include "openvino/genai/scheduler_config.hpp"
 #include "openvino/genai/tokenizer.hpp"
 #include "openvino/genai/generation_config.hpp"
@@ -265,6 +267,15 @@ public:
     GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const ov::genai::GenerationConfig& sampling_params);
     GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const std::vector<ov::Tensor>& images, const ov::genai::GenerationConfig& sampling_params);
     GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const std::vector<ov::Tensor>& images, const std::vector<ov::Tensor>& videos, const ov::genai::GenerationConfig& sampling_params);
+    GenerationHandle add_request(
+        uint64_t request_id,
+        const std::string& prompt,
+        const std::vector<ov::Tensor>& images,
+        const std::vector<ov::Tensor>& videos,
+        const std::vector<ov::Tensor>& audios,
+        const ov::genai::GenerationConfig& text_sampling_params,
+        const ov::genai::OmniSpeechGenerationConfig& speech_sampling_params
+    );
 
     GenerationHandle add_request(uint64_t request_id, const std::string& prompt, const ov::AnyMap& properties_map);
 
@@ -327,8 +338,9 @@ public:
         const std::vector<ChatHistory>& histories,
         const std::vector<std::vector<ov::Tensor>>& images,
         const std::vector<std::vector<ov::Tensor>>& videos,
+        const std::vector<std::vector<ov::Tensor>>& audios,
         const std::vector<GenerationConfig>& sampling_params,
-        const StreamerVariant& streamer=std::monostate{});
+        const AudioStreamerVariant& streamer=std::monostate{});
 
     std::vector<VLMDecodedResults> generate(
         const std::vector<ChatHistory>& histories,
@@ -342,12 +354,6 @@ public:
     ) {
         return generate(histories, AnyMap{std::forward<Properties>(properties)...});
     }
-
-    /**
-    * @brief Forward audio tensors to the inputs embedder for encoding (Qwen3-Omni).
-    * @param audios vector of audio tensors to encode.
-    */
-    void encode_audios(const std::vector<ov::Tensor>& audios);
 
     /**
     * @brief start chat with keeping history in kv cache.

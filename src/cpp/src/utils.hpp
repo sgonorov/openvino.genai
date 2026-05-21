@@ -8,7 +8,7 @@
 #include <utility>
 #include <cstdint>
 
-#include "openvino/genai/audio_streamer_base.hpp"
+#include "openvino/genai/omni/speech_streamer_base.hpp"
 #include "openvino/genai/extensions.hpp"
 #include "openvino/genai/llm_pipeline.hpp"
 #include "openvino/genai/visual_language/pipeline.hpp"

@@ -18,23 +18,80 @@ namespace ov::genai {
 class OPENVINO_GENAI_EXPORTS VLMDecodedResults : public DecodedResults{
 public:
     VLMPerfMetrics perf_metrics;
-    /// @brief Optional speech output waveforms (one per generated result).
-    /// Empty if speech generation was not requested or model does not support it.
-    std::vector<ov::Tensor> speech_outputs;
 
     // Internal fields for speech pipeline (not exposed to Python bindings).
     // Populated by CB generate when return_audio is requested, consumed by VLM adapter.
-    struct HiddenStatesData {
-        std::vector<std::vector<ov::Tensor>> hidden_states;
-        std::vector<std::vector<ov::Tensor>> intermediate_hidden_states;
-        std::vector<int64_t> prompt_ids;
-    };
-    std::shared_ptr<HiddenStatesData> m_hidden_states_data;
+    std::vector<std::vector<ov::Tensor>> hidden_states;
+    std::vector<std::vector<ov::Tensor>> intermediate_hidden_states;
+    std::vector<std::vector<int64_t>> prompt_ids;
+};
+
+class OPENVINO_GENAI_EXPORTS VLMPipelineBase {
+public:
+    virtual ~VLMPipelineBase() = default;
+    virtual VLMDecodedResults generate(
+        const std::string& prompt,
+        const std::vector<ov::Tensor>& images,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    virtual VLMDecodedResults generate(
+        const std::string& prompt,
+        const std::vector<ov::Tensor>& images,
+        const std::vector<ov::Tensor>& videos,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    virtual VLMDecodedResults generate(
+        const std::string& prompt,
+        const ov::Tensor& image,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    virtual VLMDecodedResults generate(
+        const std::string& prompt,
+        const ov::AnyMap& config_map
+    ) = 0;
+    virtual VLMDecodedResults generate(
+        const ChatHistory& history,
+        const std::vector<ov::Tensor>& images,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    virtual VLMDecodedResults generate(
+        const ChatHistory& history,
+        const std::vector<ov::Tensor>& images,
+        const std::vector<ov::Tensor>& videos,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    virtual VLMDecodedResults generate(
+        const ChatHistory& history,
+        const std::vector<ov::Tensor>& images,
+        const std::vector<ov::Tensor>& videos,
+        const std::vector<ov::Tensor>& audios,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    virtual VLMDecodedResults generate(
+        const ChatHistory& history,
+        const ov::Tensor& image,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) = 0;
+    virtual VLMDecodedResults generate(
+        const ChatHistory& history,
+        const ov::AnyMap& config_map
+    ) = 0;
+    virtual ov::genai::Tokenizer get_tokenizer() const = 0;
+    virtual GenerationConfig get_generation_config() const = 0;
+    void set_generation_config(const GenerationConfig& new_config) = 0;
+
 };
 
 /// @brief A Visual language modeling pipeline class used to generate a
 /// response or run a chat given a prompt and an image.
-class OPENVINO_GENAI_EXPORTS VLMPipeline {
+class OPENVINO_GENAI_EXPORTS VLMPipeline : public VLMPipelineBase {
 public:
     /// @brief Construct a pipeline from a folder containing tokenizer
     /// and model IRs.
@@ -97,7 +154,7 @@ public:
         : VLMPipeline(models_map, tokenizer, config_dir_path, device, ov::AnyMap{std::forward<Properties>(properties)...}) { }
 
     /// @brief Default destructor.
-    ~VLMPipeline();
+    ~VLMPipeline() override;
 
     /// @brief Generate a response given a prompt and any number of
     /// uint8 RGB images with [NHWC] or [HWC] layout.
@@ -115,7 +172,7 @@ public:
         const std::vector<ov::Tensor>& images,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
 
     /// @brief Generate a response given a prompt and uint8 RGB image with [NHWC] or [HWC] layout.
     /// @param prompt A prompt to respond to.
@@ -134,7 +191,7 @@ public:
         const std::vector<ov::Tensor>& videos,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
 
     /// @brief Generate a response given a prompt and uint8 RGB image with [NHWC] or [HWC] layout.
     /// @param prompt A prompt to respond to.
@@ -151,7 +208,7 @@ public:
         const ov::Tensor& image,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
 
     /// @brief Generate a response given a prompt and config.
     /// @param prompt A prompt to respond to.
@@ -166,7 +223,7 @@ public:
     VLMDecodedResults generate(
         const std::string& prompt,
         const ov::AnyMap& config_map
-    );
+    ) override;
 
     /// @brief Generate a response given a prompt and arbitrary number
     /// of ov::Property instances.
@@ -204,7 +261,7 @@ public:
         const std::vector<ov::Tensor>& images,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
 
     /// @brief Generate a response given a chat history and any number of
     /// uint8 RGB images/videos with [NHWC] layout.
@@ -222,7 +279,16 @@ public:
         const std::vector<ov::Tensor>& videos,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
+
+    VLMDecodedResults generate(
+        const ChatHistory& history,
+        const std::vector<ov::Tensor>& images,
+        const std::vector<ov::Tensor>& videos,
+        const std::vector<ov::Tensor>& audios,
+        const GenerationConfig& generation_config,
+        const StreamerVariant& streamer
+    ) override;
 
     /// @brief Generate a response given a chat history and uint8 RGB image with [NHWC] or [HWC] layout.
     /// @param history Chat history with messages.
@@ -237,7 +303,7 @@ public:
         const ov::Tensor& image,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
-    );
+    ) override;
 
     /// @brief Generate a response given a chat history and arbitrary number
     /// of ov::Property instances.
@@ -251,7 +317,7 @@ public:
     VLMDecodedResults generate(
         const ChatHistory& history,
         const ov::AnyMap& config_map
-    );
+    ) override;
 
     /// @brief Generate a response given a chat history and config.
     /// @param history Chat history with messages.
@@ -290,15 +356,15 @@ public:
 
     /// @brief Get a Tokenizer used to tokenize input and detokenize
     /// output.
-    ov::genai::Tokenizer get_tokenizer() const;
+    ov::genai::Tokenizer get_tokenizer() const override;
 
     /// @brief Extract GenerationConfig used to get default values.
     /// @return Default values used.
-    GenerationConfig get_generation_config() const;
+    GenerationConfig get_generation_config() const override;
 
     /// @brief Override default values for GenerationConfig
     /// @param new_config A config to override default values with.
-    void set_generation_config(const GenerationConfig& new_config);
+    void set_generation_config(const GenerationConfig& new_config) override;
 
 private:
     class VLMPipelineBase;

@@ -35,7 +35,7 @@ namespace ov::genai {
  *   - CANCEL   -- cancel generation. end() is still called.
  *                  Generated tokens may be discarded depending on the pipeline.
  */
-class OPENVINO_GENAI_EXPORTS AudioStreamerBase {
+class OPENVINO_GENAI_EXPORTS OmniSpeechStreamerBase {
 public:
     /// @brief Called with each audio chunk during speech generation.
     /// @param audio_chunk Waveform tensor [1, 1, N_samples] float32 PCM at 24kHz.
@@ -47,16 +47,16 @@ public:
     ///        Always called, even on early stop/cancel or error.
     virtual void end() = 0;
 
-    virtual ~AudioStreamerBase() = default;
+    virtual ~OmniSpeechStreamerBase() = default;
 };
 
 /// @brief Variant type for audio streaming callbacks.
 /// - Lambda: std::function<StreamingStatus(const ov::Tensor&)> — called with each audio chunk
-/// - AudioStreamerBase subclass via shared_ptr
+/// - OmniSpeechStreamerBase subclass via shared_ptr
 /// - monostate: no streaming (batch mode, default)
-using AudioStreamerVariant = std::variant<
+using OmniSpeechStreamerVariant = std::variant<
     std::function<StreamingStatus(const ov::Tensor&)>,
-    std::shared_ptr<AudioStreamerBase>,
+    std::shared_ptr<OmniSpeechStreamerBase>,
     std::monostate>;
 
 }  // namespace ov::genai
