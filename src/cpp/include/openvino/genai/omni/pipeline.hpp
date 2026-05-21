@@ -166,7 +166,7 @@ public:
         );
     }
 
-    std::shared_ptr<ov::genai::VLMPipeline> get_vlm_pipeline() const;
+    std::shared_ptr<VLMPipelineBase> get_vlm_pipeline() const;
 
     /// @brief Extract OmniSpeechGenerationConfig used to get default values.
     /// @return Default values used.

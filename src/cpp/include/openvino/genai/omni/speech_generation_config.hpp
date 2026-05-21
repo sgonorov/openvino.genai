@@ -7,6 +7,7 @@
 #include <limits>
 #include <string>
 
+#include "openvino/runtime/properties.hpp"
 #include "openvino/genai/visibility.hpp"
 
 namespace ov::genai {
