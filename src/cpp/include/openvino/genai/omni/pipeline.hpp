@@ -107,7 +107,7 @@ public:
         const std::vector<ov::Tensor>& audios,
         const GenerationConfig& text_generation_config,
         const OmniSpeechGenerationConfig& speech_generation_config,
-        const AudioStreamerVariant& streamer = std::monostate{}
+        const SpeechStreamerVariant& streamer = std::monostate{}
     );
 
     /// @brief Generate a response given a chat history and arbitrary number
