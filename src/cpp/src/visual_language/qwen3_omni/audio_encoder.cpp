@@ -7,19 +7,35 @@
 #include <cstring>
 #include <vector>
 
-#include "audio_utils.hpp"
 #include "openvino/openvino.hpp"
 #include "utils.hpp"
 
 namespace ov::genai {
+
+namespace {
+// Qwen3-Omni declares "feature_extractor_type": "WhisperFeatureExtractor" in its
+// HF preprocessor_config.json. These match the HF WhisperFeatureExtractor defaults.
+constexpr size_t WHISPER_SAMPLING_RATE = 16000;
+constexpr size_t WHISPER_N_FFT = 400;
+constexpr size_t WHISPER_HOP_LENGTH = 160;
+}  // namespace
 
 AudioEncoderQwen3Omni::AudioEncoderQwen3Omni(const std::filesystem::path& model_dir,
                                              const VLMConfig& config,
                                              const std::string& device,
                                              const ov::AnyMap& properties)
     : m_config(config),
-      m_mel_extractor(config.audio_config_num_mel_bins, 16000, 400, 160) {
+      m_feature_extractor(config.audio_config_num_mel_bins,
+                          WHISPER_SAMPLING_RATE,
+                          WHISPER_N_FFT,
+                          WHISPER_HOP_LENGTH) {
+    // Resolve canonical paths to prevent path traversal via attacker-controlled model_dir.
+    const auto canonical_model_dir = std::filesystem::weakly_canonical(model_dir);
     auto model_path = model_dir / "openvino_audio_encoder_model.xml";
+    auto canonical_model_path = std::filesystem::weakly_canonical(model_path);
+    OPENVINO_ASSERT(canonical_model_path.string().rfind(canonical_model_dir.string(), 0) == 0,
+                    "Refusing to load audio encoder file outside model_dir: ",
+                    canonical_model_path.string());
     // Audio encoder is optional - model works as text+vision VLM without it
     if (!std::filesystem::exists(model_path)) {
         return;
@@ -34,16 +50,40 @@ AudioEncoderQwen3Omni::AudioEncoderQwen3Omni(const std::filesystem::path& model_
         });
 }
 
+void AudioEncoderQwen3Omni::validate_audio_shape(const ov::Shape& shape, ov::element::Type element_type) {
+    OPENVINO_ASSERT(element_type == ov::element::f32,
+                    "Audio input must be float32 PCM, got ",
+                    element_type);
+    OPENVINO_ASSERT(shape.size() == 1,
+                    "Audio input must be a 1-D tensor of PCM samples, got rank ",
+                    shape.size());
+    const size_t audio_len = ov::shape_size(shape);
+    OPENVINO_ASSERT(audio_len > 0,
+                    "Audio input is empty (0 samples). Provide at least n_fft/2 + 1 samples.");
+    OPENVINO_ASSERT(audio_len <= MAX_AUDIO_SAMPLES,
+                    "Audio input too large: got ",
+                    audio_len,
+                    " samples, max is ",
+                    MAX_AUDIO_SAMPLES,
+                    " (~30 min @ 16 kHz)");
+}
+
+void AudioEncoderQwen3Omni::validate_audio_input(const ov::Tensor& audio_raw) {
+    validate_audio_shape(audio_raw.get_shape(), audio_raw.get_element_type());
+}
+
 std::tuple<ov::Tensor, ov::Tensor, ov::Tensor, ov::Tensor> AudioEncoderQwen3Omni::preprocess_audio(
     const ov::Tensor& audio_raw) {
-    OPENVINO_ASSERT(audio_raw.get_element_type() == ov::element::f32, "Audio input must be float32 PCM");
+    // Reject malformed or oversized audio before any allocation.
+    validate_audio_input(audio_raw);
 
     const auto* audio_data = audio_raw.data<float>();
     const auto audio_len = audio_raw.get_size();
     std::vector<float> raw_speech(audio_data, audio_data + audio_len);
 
-    size_t n_frames = 0;
-    auto mel_data = m_mel_extractor.extract(raw_speech, n_frames);
+    auto features = m_feature_extractor.extract(raw_speech);
+    const auto& mel_data = features.data;
+    const size_t n_frames = features.n_frames;
     OPENVINO_ASSERT(n_frames > 0, "Audio input too short to produce mel spectrogram frames");
 
     const auto num_mel_bins = m_config.audio_config_num_mel_bins;
