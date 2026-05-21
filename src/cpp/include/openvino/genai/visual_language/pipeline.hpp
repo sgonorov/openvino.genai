@@ -154,7 +154,7 @@ public:
         : VLMPipeline(models_map, tokenizer, config_dir_path, device, ov::AnyMap{std::forward<Properties>(properties)...}) { }
 
     /// @brief Default destructor.
-    ~VLMPipeline();
+    ~VLMPipeline() override;
 
     /// @brief Generate a response given a prompt and any number of
     /// uint8 RGB images with [NHWC] or [HWC] layout.

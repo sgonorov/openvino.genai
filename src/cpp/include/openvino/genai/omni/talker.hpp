@@ -21,6 +21,22 @@ public:
         const VLMDecodedResults& vlm_results,
         const AnyMap& properties = {}
     ) = 0;
+};
+
+class OPENVINO_GENAI_EXPORTS Talker : public TalkerBase {
+public:
+    ~Talker() override;
+
+    virtual OmniDecodedResults generate(
+        const VLMDecodedResults& vlm_results,
+        const OmniSpeechGenerationConfig& speech_generation_config,
+        const SpeechStreamerVariant& streamer = std::monostate{}
+    ) override;
+
+    virtual OmniDecodedResults generate(
+        const VLMDecodedResults& vlm_results,
+        const AnyMap& properties = {}
+    ) override;
 
     template <typename... Properties>
     util::EnableIfAllStringAny<OmniDecodedResults, Properties...> generate(
