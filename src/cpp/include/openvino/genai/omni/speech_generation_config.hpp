@@ -7,7 +7,7 @@
 #include <limits>
 #include <string>
 
-#include "openvino/runtime/infer_request.hpp"
+#include "openvino/genai/visibility.hpp"
 
 namespace ov::genai {
 class OPENVINO_GENAI_EXPORTS OmniSpeechGenerationConfig {

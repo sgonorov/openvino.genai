@@ -11,6 +11,7 @@
 #include <openvino/runtime/tensor.hpp>
 
 #include "openvino/genai/omni/audio_streamer_base.hpp"
+#include "openvino/genai/omni/speech_generation_config.hpp"
 #include "openvino/genai/scheduler_config.hpp"
 #include "openvino/genai/tokenizer.hpp"
 #include "openvino/genai/generation_config.hpp"
