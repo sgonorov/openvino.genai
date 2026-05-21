@@ -10,6 +10,7 @@
 
 #include <openvino/runtime/tensor.hpp>
 
+#include "openvino/genai/omni/audio_streamer_base.hpp"
 #include "openvino/genai/scheduler_config.hpp"
 #include "openvino/genai/tokenizer.hpp"
 #include "openvino/genai/generation_config.hpp"
@@ -270,7 +271,7 @@ public:
         const std::string& prompt,
         const std::vector<ov::Tensor>& images,
         const std::vector<ov::Tensor>& videos,
-        std::vector<ov::Tensor>& audios,
+        const std::vector<ov::Tensor>& audios,
         const ov::genai::GenerationConfig& text_sampling_params,
         const ov::genai::OmniSpeechGenerationConfig& speech_sampling_params
     );

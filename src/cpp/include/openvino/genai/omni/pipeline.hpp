@@ -8,11 +8,13 @@
 #include <filesystem>
 
 #include "openvino/genai/llm_pipeline.hpp"
+#include "openvino/genai/omni/audio_streamer_base.hpp"
+#include "openvino/genai/omni/speech_generation_config.hpp"
 #include "openvino/genai/streamer_base.hpp"
 #include "openvino/genai/tokenizer.hpp"
 #include "openvino/genai/visual_language/perf_metrics.hpp"
+#include "openvino/genai/visual_language/pipeline.hpp"
 #include "openvino/genai/visual_language/video_metadata.hpp"
-#include "openvino/genai/omni/speech_generation_config.hpp"
 
 namespace ov::genai {
 
@@ -84,7 +86,7 @@ public:
         const std::filesystem::path& config_dir,
         const std::string& device,
         Properties&&... properties
-    ): OmniPipeline(models_map, tokenizer, config_dir_path, device, ov::AnyMap{std::forward<Properties>(properties)...}) {}
+    ): OmniPipeline(models_map, tokenizer, config_dir, device, ov::AnyMap{std::forward<Properties>(properties)...}) {}
 
     // properties don't affect vlm arg.
     OmniPipeline(
@@ -179,5 +181,4 @@ private:
     std::unique_ptr<OmniPipelineImpl> m_pimpl;
 };
 
-static constexpr ov::Property<ov::Tensor> return_audio{"return_audio"};
 }

@@ -359,8 +359,6 @@ public:
     /// output.
     ov::genai::Tokenizer get_tokenizer() const override;
 
-     /// @brief Generate a response given a prompt and any number of
-
     /// @brief Extract GenerationConfig used to get default values.
     /// @return Default values used.
     GenerationConfig get_generation_config() const override;
