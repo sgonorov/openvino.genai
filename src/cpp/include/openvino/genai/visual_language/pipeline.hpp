@@ -21,55 +21,52 @@ public:
 
     // Internal fields for speech pipeline (not exposed to Python bindings).
     // Populated by CB generate when return_audio is requested, consumed by VLM adapter.
-    struct HiddenStatesData {
-        std::vector<std::vector<ov::Tensor>> hidden_states;
-        std::vector<std::vector<ov::Tensor>> intermediate_hidden_states;
-        std::vector<int64_t> prompt_ids;
-    };
-    std::shared_ptr<HiddenStatesData> m_hidden_states_data;  // Why shared_ptr?
+    std::vector<std::vector<ov::Tensor>> hidden_states;
+    std::vector<std::vector<ov::Tensor>> intermediate_hidden_states;
+    std::vector<std::vector<int64_t>> prompt_ids;
 };
 
 
 class OPENVINO_GENAI_EXPORTS VLMPipelineBase {
 public:
     virtual ~VLMPipelineBase() = default;
-    VLMDecodedResults generate(
+    virtual VLMDecodedResults generate(
         const std::string& prompt,
         const std::vector<ov::Tensor>& images,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
     ) = 0;
-    VLMDecodedResults generate(
+    virtual VLMDecodedResults generate(
         const std::string& prompt,
         const std::vector<ov::Tensor>& images,
         const std::vector<ov::Tensor>& videos,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
     ) = 0;
-    VLMDecodedResults generate(
+    virtual VLMDecodedResults generate(
         const std::string& prompt,
         const ov::Tensor& image,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
     ) = 0;
-    VLMDecodedResults generate(
+    virtual VLMDecodedResults generate(
         const std::string& prompt,
         const ov::AnyMap& config_map
     ) = 0;
-    VLMDecodedResults generate(
+    virtual VLMDecodedResults generate(
         const ChatHistory& history,
         const std::vector<ov::Tensor>& images,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
     ) = 0;
-    VLMDecodedResults generate(
+    virtual VLMDecodedResults generate(
         const ChatHistory& history,
         const std::vector<ov::Tensor>& images,
         const std::vector<ov::Tensor>& videos,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
     ) = 0;
-    VLMDecodedResults generate(
+    virtual VLMDecodedResults generate(
         const ChatHistory& history,
         const std::vector<ov::Tensor>& images,
         const std::vector<ov::Tensor>& videos,
@@ -77,18 +74,18 @@ public:
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
     ) = 0;
-    VLMDecodedResults generate(
+    virtual VLMDecodedResults generate(
         const ChatHistory& history,
         const ov::Tensor& image,
         const GenerationConfig& generation_config,
         const StreamerVariant& streamer
     ) = 0;
-    VLMDecodedResults generate(
+    virtual VLMDecodedResults generate(
         const ChatHistory& history,
         const ov::AnyMap& config_map
     ) = 0;
-    ov::genai::Tokenizer get_tokenizer() const = 0;
-    GenerationConfig get_generation_config() const = 0;
+    virtual ov::genai::Tokenizer get_tokenizer() const = 0;
+    virtual GenerationConfig get_generation_config() const = 0;
     void set_generation_config(const GenerationConfig& new_config) = 0;
 
 };

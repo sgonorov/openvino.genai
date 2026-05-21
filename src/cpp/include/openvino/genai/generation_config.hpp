@@ -760,8 +760,5 @@ static constexpr ov::Property<std::string> backend{"backend"};
 
 static constexpr ov::Property<bool> apply_chat_template{"apply_chat_template"};
 
-static constexpr ov::Property<std::string> speaker{"speaker"};
-static constexpr ov::Property<size_t> audio_chunk_frames{"audio_chunk_frames"};
-
 }  // namespace genai
 }  // namespace ov

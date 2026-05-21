@@ -86,10 +86,11 @@ public:
         Properties&&... properties
     ): OmniPipeline(models_map, tokenizer, config_dir_path, device, ov::AnyMap{std::forward<Properties>(properties)...}) {}
 
+    // properties don't affect vlm arg.
     OmniPipeline(
         const std::shared_ptr<VLMPipelineBase>& vlm,
-        const std::filesystem::path& audio_xml,
-        const std::string& audio_device,
+        const std::filesystem::path& speech_dir,
+        const std::string& speech_device,
         const ov::genai::OmniSpeechGenerationConfig& speech_generation_config,
         const ov::AnyMap& properties = {}
     );
@@ -104,7 +105,7 @@ public:
         const std::vector<ov::Tensor>& audios,
         const GenerationConfig& text_generation_config,
         const OmniSpeechGenerationConfig& speech_generation_config,
-        const AudioStreamerVariant& streamer
+        const AudioStreamerVariant& streamer = std::monostate{}
     );
 
     /// @brief Generate a response given a chat history and arbitrary number
