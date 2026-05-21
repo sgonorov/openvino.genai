@@ -8,7 +8,7 @@
 #include <filesystem>
 
 #include "openvino/genai/llm_pipeline.hpp"
-#include "openvino/genai/omni/audio_streamer_base.hpp"
+#include "openvino/genai/omni/speech_streamer_base.hpp"
 #include "openvino/genai/omni/speech_generation_config.hpp"
 #include "openvino/genai/streamer_base.hpp"
 #include "openvino/genai/tokenizer.hpp"

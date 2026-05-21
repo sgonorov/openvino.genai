@@ -26,7 +26,6 @@ public:
     std::vector<std::vector<int64_t>> prompt_ids;
 };
 
-
 class OPENVINO_GENAI_EXPORTS VLMPipelineBase {
 public:
     virtual ~VLMPipelineBase() = default;

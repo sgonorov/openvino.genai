@@ -10,7 +10,7 @@
 
 #include <openvino/runtime/tensor.hpp>
 
-#include "openvino/genai/omni/audio_streamer_base.hpp"
+#include "openvino/genai/omni/speech_streamer_base.hpp"
 #include "openvino/genai/omni/speech_generation_config.hpp"
 #include "openvino/genai/scheduler_config.hpp"
 #include "openvino/genai/tokenizer.hpp"
@@ -317,15 +317,6 @@ public:
 
     std::vector<VLMDecodedResults> generate(
         const std::vector<std::string>& prompts,
-        const std::vector<std::vector<ov::Tensor>>& images,
-        const std::vector<std::vector<ov::Tensor>>& videos,
-        const std::vector<std::vector<ov::Tensor>>& audios,
-        const std::vector<GenerationConfig>& sampling_params,
-        const std::vector<OmniSpeechGenerationConfig>& speech_sampling_params,
-        const StreamerVariant& streamer=std::monostate{});
-
-    std::vector<VLMDecodedResults> generate(
-        const std::vector<std::string>& prompts,
         const ov::AnyMap& properties_map
     );
 
@@ -349,7 +340,6 @@ public:
         const std::vector<std::vector<ov::Tensor>>& videos,
         const std::vector<std::vector<ov::Tensor>>& audios,
         const std::vector<GenerationConfig>& sampling_params,
-        const std::vector<OmniSpeechGenerationConfig>& speech_sampling_params,
         const AudioStreamerVariant& streamer=std::monostate{});
 
     std::vector<VLMDecodedResults> generate(

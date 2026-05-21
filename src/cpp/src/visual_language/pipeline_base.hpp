@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "openvino/genai/audio_streamer_base.hpp"
+#include "openvino/genai/omni/speech_streamer_base.hpp"
 #include "openvino/genai/visual_language/pipeline.hpp"
 #include "visual_language/vision_properties.hpp"
 #include "utils.hpp"
