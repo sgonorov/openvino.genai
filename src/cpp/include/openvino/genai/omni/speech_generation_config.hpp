@@ -13,9 +13,6 @@
 namespace ov::genai {
 class OPENVINO_GENAI_EXPORTS OmniSpeechGenerationConfig {
 public:
-    OmniSpeechGenerationConfig() = default;
-    explicit OmniSpeechGenerationConfig(const std::filesystem::path& json_path);
-
     /// @brief Enable speech output generation (requires model with talker support).
     bool return_audio = true;
     /// @brief Speaker name for speech output. Empty string selects the model's default speaker.
