@@ -10,6 +10,7 @@
 #include "openvino/genai/llm_pipeline.hpp"
 #include "openvino/genai/omni/speech_streamer_base.hpp"
 #include "openvino/genai/omni/speech_generation_config.hpp"
+#include "openvino/genai/omni/talker.hpp"
 #include "openvino/genai/streamer_base.hpp"
 #include "openvino/genai/tokenizer.hpp"
 #include "openvino/genai/visual_language/perf_metrics.hpp"
@@ -91,10 +92,7 @@ public:
     // properties don't affect vlm arg.
     OmniPipeline(
         const std::shared_ptr<VLMPipelineBase>& vlm,
-        const std::filesystem::path& speech_dir,
-        const std::string& speech_device,
-        const ov::genai::OmniSpeechGenerationConfig& speech_generation_config,
-        const ov::AnyMap& properties = {}
+        const std::shared_ptr<TalkerBase>& talker,
     );
 
     /// @brief Default destructor.
@@ -167,14 +165,7 @@ public:
     }
 
     std::shared_ptr<VLMPipelineBase> get_vlm_pipeline() const;
-
-    /// @brief Extract OmniSpeechGenerationConfig used to get default values.
-    /// @return Default values used.
-    OmniSpeechGenerationConfig get_speech_generation_config() const;
-
-    /// @brief Override default values for OmniSpeechGenerationConfig
-    /// @param new_config A config to override default values with.
-    void set_speech_generation_config(const OmniSpeechGenerationConfig& new_config);
+    std::shared_ptr<VLMPipelineBase> get_talker() const;
 
 private:
     class OmniPipelineImpl;
