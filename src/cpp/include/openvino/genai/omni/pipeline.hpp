@@ -89,7 +89,6 @@ public:
         Properties&&... properties
     ): OmniPipeline(models_map, tokenizer, config_dir, device, ov::AnyMap{std::forward<Properties>(properties)...}) {}
 
-    // properties don't affect vlm arg.
     OmniPipeline(
         const std::shared_ptr<VLMPipelineBase>& vlm,
         const std::shared_ptr<TalkerBase>& talker,
