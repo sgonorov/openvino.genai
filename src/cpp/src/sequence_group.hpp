@@ -911,6 +911,25 @@ public:
         m_generation_stream->push({});
     }
 
+    void push_finished_hidden_states() {
+        GenerationOutputs outputs;
+        for (auto& sequence : m_sequences) {
+            if (!sequence->has_finished()) {
+                continue;
+            }
+            const auto& hidden_states = sequence->get_all_intermediate_hidden_states();
+            if (hidden_states.empty()) {
+                continue;
+            }
+            GenerationOutput output;
+            output.score = m_sampling_params.is_beam_search() ? sequence->get_beam_search_score(m_sampling_params) : sequence->get_cumulative_log_prob();
+            output.finish_reason = sequence->get_finish_reason();
+            output.intermediate_hidden_states = hidden_states;
+            outputs.emplace(sequence->get_grouped_id(), output);
+        }
+        m_generation_stream->push(std::move(outputs));
+    }
+
     void push_outputs() {
         GenerationOutputs outputs;
         for (auto& sequence: m_sequences) {
@@ -923,6 +942,7 @@ public:
             }
             output.score = m_sampling_params.is_beam_search() ? sequence->get_beam_search_score(m_sampling_params) : sequence->get_cumulative_log_prob();
             output.finish_reason = sequence->get_finish_reason();
+            output.intermediate_hidden_states = sequence->get_all_intermediate_hidden_states();
             outputs.emplace(sequence->get_grouped_id(), output);
         }
         m_generation_stream->push(std::move(outputs));
@@ -938,6 +958,10 @@ public:
                 output.generated_ids.insert(output.generated_ids.begin(), m_prompt_ids.begin(), m_prompt_ids.end());
                 output.generated_log_probs.insert(output.generated_log_probs.begin(), m_prompt_log_probs.begin(), m_prompt_log_probs.end());
             }
+            // Hidden states are complete only once the sequence finishes; ride them out on the
+            // terminal streaming push so the add_request() handle receives them too.
+            if (sequence->has_finished())
+                output.intermediate_hidden_states = sequence->get_all_intermediate_hidden_states();
             outputs.emplace(sequence->get_grouped_id(), output);
         }
         m_has_echoed = true;
@@ -966,7 +990,9 @@ public:
                 // push empty output in case we won't stream generation res
                 if (generated_len <= (m_num_streamed_tokens + m_stream_window_size)) {
                     if (has_finished()) {
-                        push_empty_outputs();
+                        // All tokens already streamed; still deliver accumulated hidden states
+                        // (falls back to an empty terminator push when there are none).
+                        push_finished_hidden_states();
                     }
                     return;
                 }

@@ -22,12 +22,12 @@ namespace ov::genai {
 
 /// @brief Configuration for Qwen3-Omni speech generation.
 struct Qwen3OmniSpeechConfig {
-    int64_t codec_bos_id = 2149;
-    int64_t codec_eos_token_id = 2150;
-    int64_t codec_pad_id = 2148;
-    int64_t codec_nothink_id = 2155;
-    int64_t codec_think_bos_id = 2156;
-    int64_t codec_think_eos_id = 2157;
+    int64_t codec_bos_id = -1;
+    int64_t codec_eos_token_id = -1;
+    int64_t codec_pad_id = -1;
+    int64_t codec_nothink_id = -1;
+    int64_t codec_think_bos_id = -1;
+    int64_t codec_think_eos_id = -1;
     int64_t tts_bos_token_id = -1;
     int64_t tts_eos_token_id = -1;
     int64_t tts_pad_token_id = -1;

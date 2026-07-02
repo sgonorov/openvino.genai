@@ -89,6 +89,7 @@ struct GenerationOutput {
     std::vector<float> generated_log_probs;
     float score = 0;
     GenerationFinishReason finish_reason = GenerationFinishReason::NONE;
+    std::vector<ov::Tensor> intermediate_hidden_states;
 };
 
 using GenerationOutputs = std::unordered_map<uint64_t, GenerationOutput>;

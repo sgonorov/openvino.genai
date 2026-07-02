@@ -80,6 +80,12 @@ Qwen3OmniSpeechConfig Qwen3OmniSpeechConfig::from_vlm_config(const VLMConfig& co
     sc.num_code_groups = config.talker_num_code_groups;
     sc.thinker_hidden_size = config.talker_thinker_hidden_size;
     sc.speaker_ids = config.speaker_ids;
+
+    OPENVINO_ASSERT(sc.codec_bos_id >= 0 && sc.codec_eos_token_id >= 0 && sc.codec_pad_id >= 0 &&
+                        sc.codec_nothink_id >= 0 && sc.codec_think_bos_id >= 0 && sc.codec_think_eos_id >= 0,
+                    "Qwen3-Omni speech: talker_config codec IDs missing from config.json "
+                    "(codec_bos_id / codec_eos_token_id / codec_pad_id / codec_nothink_id / "
+                    "codec_think_bos_id / codec_think_eos_id are required for speech generation).");
     return sc;
 }
 

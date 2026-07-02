@@ -139,13 +139,13 @@ public:
     size_t talker_num_code_groups = 16;
     /// @brief Talker: thinker hidden size for projection.
     size_t talker_thinker_hidden_size = 2560;
-    // Codec special token IDs
-    int64_t talker_codec_bos_id = 2149;
-    int64_t talker_codec_eos_token_id = 2150;
-    int64_t talker_codec_pad_id = 2148;
-    int64_t talker_codec_nothink_id = 2155;
-    int64_t talker_codec_think_bos_id = 2156;
-    int64_t talker_codec_think_eos_id = 2157;
+    // Codec special token IDs (model-specific; -1 until loaded from talker_config in config.json)
+    int64_t talker_codec_bos_id = -1;
+    int64_t talker_codec_eos_token_id = -1;
+    int64_t talker_codec_pad_id = -1;
+    int64_t talker_codec_nothink_id = -1;
+    int64_t talker_codec_think_bos_id = -1;
+    int64_t talker_codec_think_eos_id = -1;
     // TTS special token IDs (in thinker vocabulary)
     int64_t tts_bos_token_id = -1;
     int64_t tts_eos_token_id = -1;
