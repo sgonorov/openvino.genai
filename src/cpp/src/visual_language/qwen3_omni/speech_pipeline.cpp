@@ -129,185 +129,186 @@ Qwen3OmniSpeechPipeline::Qwen3OmniSpeechPipeline(const std::filesystem::path& mo
     m_talker_available = m_talker && m_talker_text_embeddings && m_talker_projections && m_code_predictor &&
                          m_code2wav && m_thinker_text_embeddings;
 
-    if (m_talker_available) {
-        auto output_pshape = m_talker_projections.get_compiled_model().output("text_projection").get_partial_shape();
-        OPENVINO_ASSERT(output_pshape.rank().is_static() && output_pshape.rank().get_length() >= 2,
-                        "Talker text projection output must have at least 2 dimensions");
-        auto last_dim = output_pshape[output_pshape.rank().get_length() - 1];
-        OPENVINO_ASSERT(last_dim.is_static(), "Talker text projection output last dimension must be static");
-        m_config.talker_hidden_size = static_cast<size_t>(last_dim.get_length());
-        OPENVINO_ASSERT(m_config.talker_hidden_size > 0,
-                        "Failed to detect talker hidden size from text projection model");
+    if (!m_talker_available) {
+        return;
+    }
+    auto output_pshape = m_talker_projections.get_compiled_model().output("text_projection").get_partial_shape();
+    OPENVINO_ASSERT(output_pshape.rank().is_static() && output_pshape.rank().get_length() >= 2,
+                    "Talker text projection output must have at least 2 dimensions");
+    auto last_dim = output_pshape[output_pshape.rank().get_length() - 1];
+    OPENVINO_ASSERT(last_dim.is_static(), "Talker text projection output last dimension must be static");
+    m_config.talker_hidden_size = static_cast<size_t>(last_dim.get_length());
+    OPENVINO_ASSERT(m_config.talker_hidden_size > 0,
+                    "Failed to detect talker hidden size from text projection model");
 
-        {
-            auto cp_inputs = m_code_predictor.get_compiled_model().inputs();
-            auto has_cp_input = [&](const std::string& name) {
-                return std::any_of(cp_inputs.begin(), cp_inputs.end(), [&](const ov::Output<const ov::Node>& port) {
-                    return port.get_any_name() == name;
-                });
-            };
-            auto cp_outputs = m_code_predictor.get_compiled_model().outputs();
-            auto has_cp_output = [&](const std::string& name) {
-                return std::any_of(cp_outputs.begin(), cp_outputs.end(), [&](const ov::Output<const ov::Node>& port) {
-                    return port.get_any_name() == name;
-                });
-            };
+    {
+        auto cp_inputs = m_code_predictor.get_compiled_model().inputs();
+        auto has_cp_input = [&](const std::string& name) {
+            return std::any_of(cp_inputs.begin(), cp_inputs.end(), [&](const ov::Output<const ov::Node>& port) {
+                return port.get_any_name() == name;
+            });
+        };
+        auto cp_outputs = m_code_predictor.get_compiled_model().outputs();
+        auto has_cp_output = [&](const std::string& name) {
+            return std::any_of(cp_outputs.begin(), cp_outputs.end(), [&](const ov::Output<const ov::Node>& port) {
+                return port.get_any_name() == name;
+            });
+        };
 
-            OPENVINO_ASSERT(has_cp_input("inputs_embeds"), "CodePredictor: missing 'inputs_embeds' input");
-            OPENVINO_ASSERT(has_cp_input("temperature"),
-                            "CodePredictor: missing 'temperature' input (expected unrolled API)");
-            OPENVINO_ASSERT(has_cp_input("top_k"), "CodePredictor: missing 'top_k' input");
-            OPENVINO_ASSERT(has_cp_input("seeds"), "CodePredictor: missing 'seeds' input");
-            OPENVINO_ASSERT(has_cp_output("codes"), "CodePredictor: missing 'codes' output");
-            OPENVINO_ASSERT(has_cp_output("codec_hiddens_sum"), "CodePredictor: missing 'codec_hiddens_sum' output");
-        }
+        OPENVINO_ASSERT(has_cp_input("inputs_embeds"), "CodePredictor: missing 'inputs_embeds' input");
+        OPENVINO_ASSERT(has_cp_input("temperature"),
+                        "CodePredictor: missing 'temperature' input (expected unrolled API)");
+        OPENVINO_ASSERT(has_cp_input("top_k"), "CodePredictor: missing 'top_k' input");
+        OPENVINO_ASSERT(has_cp_input("seeds"), "CodePredictor: missing 'seeds' input");
+        OPENVINO_ASSERT(has_cp_output("codes"), "CodePredictor: missing 'codes' output");
+        OPENVINO_ASSERT(has_cp_output("codec_hiddens_sum"), "CodePredictor: missing 'codec_hiddens_sum' output");
+    }
 
-        // Pre-allocate scratch buffers that are reused across generate_speech() calls
-        m_cp_embed_sum = ov::Tensor(ov::element::f32, {1, 1, m_config.talker_hidden_size});
+    // Pre-allocate scratch buffers that are reused across generate_speech() calls
+    m_cp_embed_sum = ov::Tensor(ov::element::f32, {1, 1, m_config.talker_hidden_size});
 
-        if (m_config.speaker_ids.empty()) {
-            m_talker_available = false;
-        }
+    if (m_config.speaker_ids.empty()) {
+        m_talker_available = false;
+    }
 
-        // Load talker and CodePredictor generation parameters from generation_config.json.
-        // CP defaults (1.0 / 50 / 1.0) match the reference Qwen3-Omni implementation; json keys
-        // cp_temperature / cp_top_k / cp_repetition_penalty may override them if present.
-        auto gen_config_path = model_dir / "generation_config.json";
-        if (std::filesystem::exists(gen_config_path)) {
-            std::ifstream f(gen_config_path);
-            auto gen_data = nlohmann::json::parse(f);
-            utils::read_json_param(gen_data, "talker_temperature", m_config.talker_temperature);
-            utils::read_json_param(gen_data, "talker_top_k", m_config.talker_top_k);
-            utils::read_json_param(gen_data, "talker_repetition_penalty", m_config.talker_repetition_penalty);
-            utils::read_json_param(gen_data, "talker_max_new_tokens", m_config.talker_max_new_tokens);
-            utils::read_json_param(gen_data, "cp_temperature", m_config.cp_temperature);
-            utils::read_json_param(gen_data, "cp_top_k", m_config.cp_top_k);
-            utils::read_json_param(gen_data, "cp_repetition_penalty", m_config.cp_repetition_penalty);
-            GENAI_INFO("Speech: talker params: temp=%.2f, top_k=%zu, rep_penalty=%.2f, max_tokens=%zu",
-                       m_config.talker_temperature,
-                       m_config.talker_top_k,
-                       m_config.talker_repetition_penalty,
-                       m_config.talker_max_new_tokens);
-            GENAI_INFO("Speech: code_predictor params: temp=%.2f, top_k=%zu, rep_penalty=%.2f",
-                       m_config.cp_temperature,
-                       m_config.cp_top_k,
-                       m_config.cp_repetition_penalty);
-        }
+    // Load talker and CodePredictor generation parameters from generation_config.json.
+    // CP defaults (1.0 / 50 / 1.0) match the reference Qwen3-Omni implementation; json keys
+    // cp_temperature / cp_top_k / cp_repetition_penalty may override them if present.
+    auto gen_config_path = model_dir / "generation_config.json";
+    if (std::filesystem::exists(gen_config_path)) {
+        std::ifstream f(gen_config_path);
+        auto gen_data = nlohmann::json::parse(f);
+        utils::read_json_param(gen_data, "talker_temperature", m_config.talker_temperature);
+        utils::read_json_param(gen_data, "talker_top_k", m_config.talker_top_k);
+        utils::read_json_param(gen_data, "talker_repetition_penalty", m_config.talker_repetition_penalty);
+        utils::read_json_param(gen_data, "talker_max_new_tokens", m_config.talker_max_new_tokens);
+        utils::read_json_param(gen_data, "cp_temperature", m_config.cp_temperature);
+        utils::read_json_param(gen_data, "cp_top_k", m_config.cp_top_k);
+        utils::read_json_param(gen_data, "cp_repetition_penalty", m_config.cp_repetition_penalty);
+        GENAI_INFO("Speech: talker params: temp=%.2f, top_k=%zu, rep_penalty=%.2f, max_tokens=%zu",
+                    m_config.talker_temperature,
+                    m_config.talker_top_k,
+                    m_config.talker_repetition_penalty,
+                    m_config.talker_max_new_tokens);
+        GENAI_INFO("Speech: code_predictor params: temp=%.2f, top_k=%zu, rep_penalty=%.2f",
+                    m_config.cp_temperature,
+                    m_config.cp_top_k,
+                    m_config.cp_repetition_penalty);
+    }
 
-        // Detect vocab_size from talker logits output and build suppress_tokens list
-        // Suppress tokens in [vocab_size-1024, vocab_size) except codec_eos_token_id
-        auto logits_pshape = m_talker.get_compiled_model().output("logits").get_partial_shape();
-        if (logits_pshape.rank().is_static()) {
-            auto vocab_dim = logits_pshape[logits_pshape.rank().get_length() - 1];
-            if (vocab_dim.is_static()) {
-                m_config.talker_vocab_size = static_cast<size_t>(vocab_dim.get_length());
-                auto suppress_start = static_cast<int64_t>(m_config.talker_vocab_size) - 1024;
-                if (suppress_start < 0)
-                    suppress_start = 0;
-                for (int64_t i = suppress_start; i < static_cast<int64_t>(m_config.talker_vocab_size); i++) {
-                    if (i != m_config.codec_eos_token_id) {
-                        m_config.talker_suppress_tokens.push_back(i);
-                    }
+    // Detect vocab_size from talker logits output and build suppress_tokens list
+    // Suppress tokens in [vocab_size-1024, vocab_size) except codec_eos_token_id
+    auto logits_pshape = m_talker.get_compiled_model().output("logits").get_partial_shape();
+    if (logits_pshape.rank().is_static()) {
+        auto vocab_dim = logits_pshape[logits_pshape.rank().get_length() - 1];
+        if (vocab_dim.is_static()) {
+            m_config.talker_vocab_size = static_cast<size_t>(vocab_dim.get_length());
+            auto suppress_start = static_cast<int64_t>(m_config.talker_vocab_size) - 1024;
+            if (suppress_start < 0)
+                suppress_start = 0;
+            for (int64_t i = suppress_start; i < static_cast<int64_t>(m_config.talker_vocab_size); i++) {
+                if (i != m_config.codec_eos_token_id) {
+                    m_config.talker_suppress_tokens.push_back(i);
                 }
-                GENAI_INFO("Speech: suppressing %zu special tokens in range [%lld, %zu)",
-                           m_config.talker_suppress_tokens.size(),
-                           (long long)suppress_start,
-                           m_config.talker_vocab_size);
             }
+            GENAI_INFO("Speech: suppressing %zu special tokens in range [%lld, %zu)",
+                        m_config.talker_suppress_tokens.size(),
+                        (long long)suppress_start,
+                        m_config.talker_vocab_size);
+        }
+    }
+
+    // Load CodePredictor codec_embedding weights (exported by optimum-intel)
+    auto cp_embed_path = model_dir / "code_predictor_codec_embedding.npy";
+    if (std::filesystem::exists(cp_embed_path)) {
+        std::ifstream npy_file(cp_embed_path, std::ios::binary);
+        OPENVINO_ASSERT(npy_file.good(), "Failed to open ", cp_embed_path.string());
+
+        // Parse .npy header
+        char magic[6];
+        npy_file.read(magic, 6);
+        OPENVINO_ASSERT(std::string(magic, 6) == std::string("\x93NUMPY", 6), "Invalid npy magic");
+        uint8_t major_version, minor_version;
+        npy_file.read(reinterpret_cast<char*>(&major_version), 1);
+        npy_file.read(reinterpret_cast<char*>(&minor_version), 1);
+        OPENVINO_ASSERT(major_version == 1 && minor_version == 0,
+                        "Only NumPy format v1.0 supported, got v",
+                        (int)major_version,
+                        ".",
+                        (int)minor_version);
+        unsigned short header_len;
+        npy_file.read(reinterpret_cast<char*>(&header_len), sizeof(header_len));
+        std::string header(header_len, ' ');
+        npy_file.read(&header[0], header_len);
+
+        // Parse shape from header
+        auto shape_start = header.find("'shape': (");
+        OPENVINO_ASSERT(shape_start != std::string::npos, "No shape in npy header");
+        shape_start += 10;
+        auto shape_end = header.find(')', shape_start);
+        OPENVINO_ASSERT(shape_end != std::string::npos, "Malformed npy header: no closing parenthesis for shape");
+        auto shape_str = header.substr(shape_start, shape_end - shape_start);
+
+        ov::Shape shape;
+        std::istringstream ss(shape_str);
+        std::string dim;
+        while (std::getline(ss, dim, ',')) {
+            dim.erase(std::remove(dim.begin(), dim.end(), ' '), dim.end());
+            if (!dim.empty())
+                shape.push_back(std::stoull(dim));
         }
 
-        // Load CodePredictor codec_embedding weights (exported by optimum-intel)
-        auto cp_embed_path = model_dir / "code_predictor_codec_embedding.npy";
-        if (std::filesystem::exists(cp_embed_path)) {
-            std::ifstream npy_file(cp_embed_path, std::ios::binary);
-            OPENVINO_ASSERT(npy_file.good(), "Failed to open ", cp_embed_path.string());
+        OPENVINO_ASSERT(shape.size() == 3, "Expected 3D codec_embedding weights, got ", shape.size(), "D");
+        auto shape_product = ov::shape_size(shape);
+        auto data_size = shape_product * sizeof(float);
+        OPENVINO_ASSERT(data_size <= 1024ULL * 1024 * 1024,
+                        "NPY file shape too large: ",
+                        data_size / (1024 * 1024),
+                        " MB");
+        m_cp_codec_embeddings = ov::Tensor(ov::element::f32, shape);
+        npy_file.read(reinterpret_cast<char*>(m_cp_codec_embeddings.data()), data_size);
+        OPENVINO_ASSERT(npy_file.gcount() == static_cast<std::streamsize>(data_size),
+                        "NPY file truncated: expected ",
+                        data_size,
+                        " bytes, read ",
+                        npy_file.gcount());
+        m_cp_vocab_size = shape[1];
+        m_cp_hidden_size = shape[2];
 
-            // Parse .npy header
-            char magic[6];
-            npy_file.read(magic, 6);
-            OPENVINO_ASSERT(std::string(magic, 6) == std::string("\x93NUMPY", 6), "Invalid npy magic");
-            uint8_t major_version, minor_version;
-            npy_file.read(reinterpret_cast<char*>(&major_version), 1);
-            npy_file.read(reinterpret_cast<char*>(&minor_version), 1);
-            OPENVINO_ASSERT(major_version == 1 && minor_version == 0,
-                            "Only NumPy format v1.0 supported, got v",
-                            (int)major_version,
-                            ".",
-                            (int)minor_version);
-            unsigned short header_len;
-            npy_file.read(reinterpret_cast<char*>(&header_len), sizeof(header_len));
-            std::string header(header_len, ' ');
-            npy_file.read(&header[0], header_len);
+        m_has_cp_embeds = true;
+        GENAI_INFO("Speech: loaded codec_embedding [%zu, %zu, %zu] from %s",
+                    shape[0],
+                    shape[1],
+                    shape[2],
+                    cp_embed_path.string().c_str());
+    } else {
+        GENAI_INFO("Speech: codec_embedding.npy not found, using talker embeddings as fallback");
+    }
 
-            // Parse shape from header
-            auto shape_start = header.find("'shape': (");
-            OPENVINO_ASSERT(shape_start != std::string::npos, "No shape in npy header");
-            shape_start += 10;
-            auto shape_end = header.find(')', shape_start);
-            OPENVINO_ASSERT(shape_end != std::string::npos, "Malformed npy header: no closing parenthesis for shape");
-            auto shape_str = header.substr(shape_start, shape_end - shape_start);
+    // Pre-compute constant embeddings. These depend only on model weights and
+    // static config, so hoisting them out of generate_speech() saves ~12 inference
+    // calls per call at the cost of a one-shot warm-up during pipeline construction.
+    if (m_talker_available) {
+        m_tts_bos_embed = project_text(embed_thinker_token(m_config.tts_bos_token_id));
+        m_tts_eos_embed = project_text(embed_thinker_token(m_config.tts_eos_token_id));
+        m_tts_pad_embed = project_text(embed_thinker_token(m_config.tts_pad_token_id));
 
-            ov::Shape shape;
-            std::istringstream ss(shape_str);
-            std::string dim;
-            while (std::getline(ss, dim, ',')) {
-                dim.erase(std::remove(dim.begin(), dim.end(), ' '), dim.end());
-                if (!dim.empty())
-                    shape.push_back(std::stoull(dim));
-            }
-
-            OPENVINO_ASSERT(shape.size() == 3, "Expected 3D codec_embedding weights, got ", shape.size(), "D");
-            auto shape_product = ov::shape_size(shape);
-            auto data_size = shape_product * sizeof(float);
-            OPENVINO_ASSERT(data_size <= 1024ULL * 1024 * 1024,
-                            "NPY file shape too large: ",
-                            data_size / (1024 * 1024),
-                            " MB");
-            m_cp_codec_embeddings = ov::Tensor(ov::element::f32, shape);
-            npy_file.read(reinterpret_cast<char*>(m_cp_codec_embeddings.data()), data_size);
-            OPENVINO_ASSERT(npy_file.gcount() == static_cast<std::streamsize>(data_size),
-                            "NPY file truncated: expected ",
-                            data_size,
-                            " bytes, read ",
-                            npy_file.gcount());
-            m_cp_vocab_size = shape[1];
-            m_cp_hidden_size = shape[2];
-
-            m_has_cp_embeds = true;
-            GENAI_INFO("Speech: loaded codec_embedding [%zu, %zu, %zu] from %s",
-                       shape[0],
-                       shape[1],
-                       shape[2],
-                       cp_embed_path.string().c_str());
-        } else {
-            GENAI_INFO("Speech: codec_embedding.npy not found, using talker embeddings as fallback");
+        const std::array<int64_t, 5> codec_specials{m_config.codec_nothink_id,
+                                                    m_config.codec_think_bos_id,
+                                                    m_config.codec_think_eos_id,
+                                                    m_config.codec_pad_id,
+                                                    m_config.codec_bos_id};
+        for (auto id : codec_specials) {
+            m_codec_special_embed.emplace(id, embed_talker_token(id));
         }
 
-        // Pre-compute constant embeddings. These depend only on model weights and
-        // static config, so hoisting them out of generate_speech() saves ~12 inference
-        // calls per call at the cost of a one-shot warm-up during pipeline construction.
-        if (m_talker_available) {
-            m_tts_bos_embed = project_text(embed_thinker_token(m_config.tts_bos_token_id));
-            m_tts_eos_embed = project_text(embed_thinker_token(m_config.tts_eos_token_id));
-            m_tts_pad_embed = project_text(embed_thinker_token(m_config.tts_pad_token_id));
-
-            const std::array<int64_t, 5> codec_specials{m_config.codec_nothink_id,
-                                                        m_config.codec_think_bos_id,
-                                                        m_config.codec_think_eos_id,
-                                                        m_config.codec_pad_id,
-                                                        m_config.codec_bos_id};
-            for (auto id : codec_specials) {
-                m_codec_special_embed.emplace(id, embed_talker_token(id));
-            }
-
-            for (const auto& [name, id] : m_config.speaker_ids) {
-                m_speaker_embed.emplace(id, embed_talker_token(id));
-                std::string lower_name = name;
-                std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(), [](unsigned char c) {
-                    return std::tolower(c);
-                });
-                m_lower_speaker_ids.emplace(std::move(lower_name), id);
-            }
+        for (const auto& [name, id] : m_config.speaker_ids) {
+            m_speaker_embed.emplace(id, embed_talker_token(id));
+            std::string lower_name = name;
+            std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(), [](unsigned char c) {
+                return std::tolower(c);
+            });
+            m_lower_speaker_ids.emplace(std::move(lower_name), id);
         }
     }
 }
@@ -632,7 +633,7 @@ std::pair<ov::Tensor, ov::Tensor> Qwen3OmniSpeechPipeline::build_talker_input(
                         mm_with_hs,
                         mm_without_hs);
         } else if (role_token == m_config.assistant_token_id) {
-            // Last assistant segment: build structured input with codec tokens
+            // Last assistant segment: build input with codec tokens
             // Positions in assistant segment (relative to seg_start):
             // 0: <|im_start|>, 1: assistant, 2: \n, 3+: text tokens
 
