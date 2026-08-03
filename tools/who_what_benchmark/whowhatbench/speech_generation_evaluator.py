@@ -418,6 +418,33 @@ class Qwen3OmniSpeechWrapper(_Qwen3OmniSpeakerMixin):
             # Model internals differ between versions; leave the model unmodified on any mismatch.
             pass
 
+    def _force_hf_code_predictor_greedy(self):
+        """Make the talker's CodePredictor decode greedily.
+
+        talker_do_sample=False only silences the talker's own sampling; the CodePredictor is
+        invoked with a hardcoded do_sample=True inside prepare_inputs_for_generation, so it keeps
+        sampling the residual codec groups. Call-time kwargs win over functools.partial, so we wrap
+        generate() to force do_sample=False (matching GenAI's cp_top_k=1 argmax). Runs once.
+        """
+        try:
+            code_predictor = self.model.talker.code_predictor
+        except AttributeError:
+            return
+        if getattr(code_predictor, "_wwb_greedy_patched", False):
+            return
+
+        original_generate = code_predictor.generate
+
+        def greedy_generate(*args, **kwargs):
+            kwargs["do_sample"] = False
+            for sampling_kwarg in ("top_k", "top_p", "temperature"):
+                kwargs.pop(sampling_kwarg, None)
+            return original_generate(*args, **kwargs)
+
+        code_predictor.generate = greedy_generate
+        code_predictor._wwb_greedy_patched = True
+        LOGGER.info("Forced Qwen3-Omni HF CodePredictor to greedy decoding for reproducibility.")
+
     def generate(self, prompt, speaker_embedding=None, language="", voice="", **_kwargs):
         self._reject_unsupported_inputs(speaker_embedding, language)
 
@@ -447,6 +474,7 @@ class Qwen3OmniSpeechWrapper(_Qwen3OmniSpeakerMixin):
             # HF rejects temperature=0 but honors do_sample=False; Optimum ignores do_sample.
             if type(self.model).__module__.startswith("transformers"):
                 greedy_kwargs = {"thinker_do_sample": False, "talker_do_sample": False}
+                self._force_hf_code_predictor_greedy()
             else:
                 greedy_kwargs = {"thinker_temperature": 0, "talker_temperature": 0}
             output = self.model.generate(

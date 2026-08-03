@@ -110,3 +110,56 @@ def test_qwen3_omni_wrappers_declare_text_prompts_file():
 
     assert hf_wrapper.prompts_file == "text_prompts.yaml"
     assert genai_wrapper.prompts_file == "text_prompts.yaml"
+
+
+class _FakeCodePredictor:
+    def __init__(self):
+        self.captured_kwargs = None
+
+    def generate(self, **kwargs):
+        self.captured_kwargs = kwargs
+        return "codes"
+
+
+class _FakeTalkerModel:
+    def __init__(self):
+        self.talker = type("_Talker", (), {"code_predictor": _FakeCodePredictor()})()
+
+
+def test_force_hf_code_predictor_greedy_overrides_sampling_kwargs():
+    """The wrapper forces do_sample=False on the CodePredictor and strips sampling knobs."""
+    model = _FakeTalkerModel()
+    wrapper = Qwen3OmniSpeechWrapper.__new__(Qwen3OmniSpeechWrapper)
+    wrapper.model = model
+
+    wrapper._force_hf_code_predictor_greedy()
+
+    # The hardcoded do_sample=True / top_k / top_p from prepare_inputs_for_generation are overridden.
+    model.talker.code_predictor.generate(do_sample=True, top_k=50, top_p=0.8, max_new_tokens=3)
+
+    captured = model.talker.code_predictor.captured_kwargs
+    assert captured["do_sample"] is False
+    assert "top_k" not in captured
+    assert "top_p" not in captured
+    assert captured["max_new_tokens"] == 3
+
+
+def test_force_hf_code_predictor_greedy_is_idempotent():
+    """Patching twice must not stack wrappers or re-wrap an already-patched predictor."""
+    model = _FakeTalkerModel()
+    wrapper = Qwen3OmniSpeechWrapper.__new__(Qwen3OmniSpeechWrapper)
+    wrapper.model = model
+
+    wrapper._force_hf_code_predictor_greedy()
+    patched_generate = model.talker.code_predictor.generate
+    wrapper._force_hf_code_predictor_greedy()
+
+    assert model.talker.code_predictor.generate is patched_generate
+
+
+def test_force_hf_code_predictor_greedy_no_talker_is_noop():
+    """Models without a talker.code_predictor (e.g. Optimum) are left untouched."""
+    wrapper = Qwen3OmniSpeechWrapper.__new__(Qwen3OmniSpeechWrapper)
+    wrapper.model = object()
+
+    wrapper._force_hf_code_predictor_greedy()  # must not raise
