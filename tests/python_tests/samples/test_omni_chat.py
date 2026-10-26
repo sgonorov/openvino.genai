@@ -38,10 +38,12 @@ def mjpeg_video(tmp_path_factory: pytest.TempPathFactory) -> str:
     return str(path)
 
 
-def omni_chat_command(sample: str, model_dir: str, image: str, audio: str, video: str) -> list[str]:
-    if sample == "cpp":
-        return [str(SAMPLES_CPP_DIR / "omni_chat"), model_dir, image, audio, video]
-    return [sys.executable, str(SAMPLES_PY_DIR / "omni/qwen3_omni_chat.py"), model_dir, image, video, "--audio", audio]
+def check_speech_output(sample_dir: Path) -> None:
+    for turn in range(TURNS):
+        waveform, sample_rate = sf.read(sample_dir / f"output_audio_{turn}.wav")
+        assert sample_rate == SPEECH_SAMPLE_RATE
+        assert waveform.ndim == 1, "Speech output must be mono"
+        assert waveform.size > 0, f"Turn {turn} produced an empty waveform"
 
 
 class TestOmniChat:
@@ -49,16 +51,22 @@ class TestOmniChat:
     @pytest.mark.samples
     @pytest.mark.parametrize("convert_model", ["tiny-random-qwen3-omni"], indirect=True)
     @pytest.mark.parametrize("download_test_content", [["monalisa.jpg", "how_are_you_doing_today.wav"]], indirect=True)
-    @pytest.mark.parametrize("sample", ["cpp", "py"])
     def test_sample_omni_chat(
-        self, convert_model: str, download_test_content: list[str], mjpeg_video: str, sample: str, tmp_path: Path
+        self, convert_model: str, download_test_content: list[str], mjpeg_video: str, tmp_path: Path
     ):
         image, audio = download_test_content
-        # The sample writes output_audio_<turn>.wav to its working directory.
-        run_sample(omni_chat_command(sample, convert_model, image, audio, mjpeg_video), QUESTIONS, cwd=str(tmp_path))
+        args = [convert_model, image, audio, mjpeg_video]
+        # Each sample writes output_audio_<turn>.wav to its working directory.
+        cpp_dir = tmp_path / "cpp"
+        py_dir = tmp_path / "py"
+        cpp_dir.mkdir()
+        py_dir.mkdir()
 
-        for turn in range(TURNS):
-            waveform, sample_rate = sf.read(tmp_path / f"output_audio_{turn}.wav")
-            assert sample_rate == SPEECH_SAMPLE_RATE
-            assert waveform.ndim == 1, "Speech output must be mono"
-            assert waveform.size > 0, f"Turn {turn} produced an empty waveform"
+        cpp_result = run_sample([str(SAMPLES_CPP_DIR / "omni_chat"), *args], QUESTIONS, cwd=str(cpp_dir))
+        py_result = run_sample(
+            [sys.executable, str(SAMPLES_PY_DIR / "omni/omni_chat.py"), *args], QUESTIONS, cwd=str(py_dir)
+        )
+
+        assert py_result.stdout == cpp_result.stdout, "Results should match"
+        check_speech_output(cpp_dir)
+        check_speech_output(py_dir)

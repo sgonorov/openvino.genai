@@ -11,7 +11,7 @@ and is subject to change in future releases.
 Demonstrates text + image + audio + video -> text + speech output using the ChatHistory API.
 
 Usage:
-    python qwen3_omni_chat.py <MODEL_DIR> <IMAGE_FILE_OR_DIR> <VIDEO_FILE> [--audio WAV ...]
+    python omni_chat.py <MODEL_DIR> <IMAGE_FILE_OR_DIR> <AUDIO_FILE> <VIDEO_FILE>
 """
 
 import argparse
@@ -115,20 +115,13 @@ def main() -> None:
         help="Image file or directory with images. Refer to them in the prompt as "
         "<ov_genai_image_0>, <ov_genai_image_1>, ... An untagged prompt gets them prepended.",
     )
-    parser.add_argument("video", help="Path to input video file")
     parser.add_argument(
-        "--audio",
-        action="append",
-        default=[],
-        metavar="WAV",
-        help="Input audio WAV file. Repeat to pass several; refer to them in the prompt as "
-        "<ov_genai_audio_0>, <ov_genai_audio_1>, ... An untagged prompt gets them prepended.",
+        "audio",
+        help="Input audio WAV file. Refer to it in the prompt as <ov_genai_audio_0>. "
+        "An untagged prompt gets it prepended.",
     )
+    parser.add_argument("video", help="Path to input video file")
     args = parser.parse_args()
-
-    rgbs = read_images(args.image_dir)
-
-    pipe = openvino_genai.OmniPipeline(args.model_dir, "CPU")
 
     # Two configs: text_config drives the thinker text decode; talker_speech_config drives the
     # talker + speech output. Speech output is hardcoded on here to show the multimodal path.
@@ -142,10 +135,38 @@ def main() -> None:
     # (e.g. MoE exposes "Ethan", "Chelsie", "Aiden", "Cherry"); the full list is in
     # talker_config.speaker_id of the model's config.json.
 
+    rgbs = read_images(args.image_dir)
+    audios = [load_audio(args.audio)]
+
+    # Compose OmniPipeline from separate VLM and Talker components.
+    # This allows independent device selection (e.g., VLM on GPU, Talker on CPU),
+    # sharing a VLM base across pipelines, or injecting custom TalkerBase implementations.
+    # For simpler use cases: openvino_genai.OmniPipeline(args.model_dir, "CPU")
+    vlm = openvino_genai.VLMPipeline(args.model_dir, "CPU")
+    talker = openvino_genai.Talker(args.model_dir, "CPU")
+    pipe = openvino_genai.OmniPipeline(vlm, talker)
+
+    # Speaker API demo: list available speakers and demonstrate voice blending.
+    speakers = talker.list_speakers()
+    print("\n=== Available Speakers ===")
+    if not speakers:
+        print("No named speakers (model has single default voice)")
+    else:
+        print(f"Found {len(speakers)} speakers:")
+        for name in speakers:
+            print(f"  - {name}")
+        print()
+
+        if len(speakers) >= 2:
+            print("=== Voice Blending Demo ===")
+            print(f"Blending {speakers[0]} + {speakers[1]} (50/50 mix)")
+            emb1 = talker.get_speaker_embedding(speakers[0]).data
+            emb2 = talker.get_speaker_embedding(speakers[1]).data
+            talker_speech_config.speaker = Tensor(0.5 * emb1 + 0.5 * emb2)
+
     video_tensor, video_metadata = read_video(args.video)
     videos = [video_tensor]
     videos_metadata = [video_metadata]
-    audios = [load_audio(path) for path in args.audio]
 
     history = openvino_genai.ChatHistory()
     prompt = input("question:\n")

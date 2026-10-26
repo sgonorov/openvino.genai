@@ -5,7 +5,7 @@
 This example demonstrates interactive multimodal chat with Qwen3-Omni models: text, image, audio, and video input producing text and optionally synthesized speech output. The sample features `openvino_genai.OmniPipeline` and configures it for the chat scenario using the `ChatHistory` API.
 
 The following are sample files:
- - [`qwen3_omni_chat.py`](./qwen3_omni_chat.py) demonstrates multimodal chat with optional speech synthesis.
+ - [`omni_chat.py`](./omni_chat.py) demonstrates multimodal chat with optional speech synthesis.
 
 ## Download and convert the model and tokenizers
 
@@ -40,19 +40,19 @@ wget https://storage.openvinotoolkit.org/repositories/openvino_notebooks/data/da
 ## Run the sample
 
 ```sh
-python qwen3_omni_chat.py <MODEL_DIR> <IMAGE_FILE_OR_DIR> <VIDEO_FILE> [--audio AUDIO_WAV]
+python omni_chat.py <MODEL_DIR> <IMAGE_FILE_OR_DIR> <AUDIO_FILE> <VIDEO_FILE>
 ```
 
 **Parameters:**
 - `<MODEL_DIR>` — Path to the exported Qwen3-Omni OpenVINO model directory.
 - `<IMAGE_FILE_OR_DIR>` — Path to an input image or a directory of images for visual context.
+- `<AUDIO_FILE>` — Path to an input audio file (16kHz mono WAV). Refer to it in a question as `<ov_genai_audio_0>`.
 - `<VIDEO_FILE>` — Path to an input video file.
-- `--audio AUDIO_WAV` — Path to an input audio file (16kHz mono WAV). Repeat the flag to pass several; refer to them in a question as `<ov_genai_audio_0>`, `<ov_genai_audio_1>`, and so on.
 
 **Example:**
 
 ```sh
-python qwen3_omni_chat.py ./qwen3-omni-ov ./coco.jpg "./Coco Walking in Berkeley.mp4" --audio ./how_are_you_doing_today.wav
+python omni_chat.py ./qwen3-omni-ov ./coco.jpg ./how_are_you_doing_today.wav "./Coco Walking in Berkeley.mp4"
 ```
 
 Images, video and audio are loaded once at startup and sent with the first question. Type questions and press Enter; the model responds with streaming text and, when speech output is enabled, 24kHz mono PCM samples in `OmniDecodedResults.speech_result.waveforms`. Each turn's speech is saved to `output_audio_<turn>.wav` in the working directory. Press Ctrl+D to exit.
@@ -60,8 +60,8 @@ Images, video and audio are loaded once at startup and sent with the first quest
 ## Audio placement
 
 Every audio you pass gets an index, starting at zero. Write `<ov_genai_audio_N>` in a question to
-put audio N at that exact position, for example `Compare <ov_genai_audio_0> with <ov_genai_audio_1>`
-with two `--audio` files. The full tag rules are in
+put audio N at that exact position, for example `Describe <ov_genai_audio_0> in one sentence`.
+The full tag rules are in
 [Use Media Tags in Prompt](https://openvinotoolkit.github.io/openvino.genai/docs/use-cases/visual-processing/#use-media-tags-in-prompt).
 
 Omit the tags and the audio is prepended to your text instead. That default is also the layout
@@ -96,6 +96,15 @@ pipe = openvino_genai.OmniPipeline(model_dir, "GPU")
 ```
 
 MoE models (30B-A3B) may exceed available GPU memory; use CPU for MoE inference.
+
+## Speaker API features
+
+The sample shows speaker enumeration and voice blending at startup:
+
+1. **List speakers** — shows all named voices in the model
+2. **Voice blending** — when 2+ speakers are available, creates a 50/50 blend and uses it for generation
+
+**Custom blending:** Retrieve speaker embeddings via `talker.get_speaker_embedding(name)`, mix with custom ratios (e.g., 0.75A + 0.25B), and pass the result via `OmniTalkerSpeechConfig.speaker`.
 
 ## See Also
 

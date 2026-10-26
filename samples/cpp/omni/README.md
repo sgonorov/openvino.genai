@@ -44,8 +44,6 @@ omni_chat <MODEL_DIR> <IMAGE_FILE_OR_DIR> <AUDIO_FILE> <VIDEO_FILE>
 - `<AUDIO_FILE>` — Path to input audio file (16kHz mono WAV)
 - `<VIDEO_FILE>` — Path to an input video file
 
-This sample takes exactly one audio file. The [Python sample](../../python/omni/) takes several through a repeatable `--audio` flag.
-
 **Example:**
 
 ```bash
